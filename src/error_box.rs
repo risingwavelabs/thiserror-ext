@@ -1,3 +1,4 @@
+/// Workaround for https://github.com/rust-lang/rust/issues/117432.
 #[derive(Clone)]
 #[repr(transparent)]
 pub struct ErrorBox<T>(pub Box<T>);
@@ -5,6 +6,14 @@ pub struct ErrorBox<T>(pub Box<T>);
 impl<T> ErrorBox<T> {
     pub fn new(t: T) -> Self {
         Self(Box::new(t))
+    }
+
+    pub fn inner(&self) -> &T {
+        &*self.0
+    }
+
+    pub fn into_inner(self) -> T {
+        *self.0
     }
 }
 

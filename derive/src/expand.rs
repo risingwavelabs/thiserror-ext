@@ -99,7 +99,7 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
             #vis struct #impl_type(
                 #[from]
                 #[backtrace]
-                pub thiserror_ext::__private::ErrorBox<#input_type>,
+                thiserror_ext::__private::ErrorBox<#input_type>,
             );
 
             // For `?` to work.
@@ -109,6 +109,18 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
             {
                 fn from(error: E) -> Self {
                     Self(thiserror_ext::__private::ErrorBox::new(error.into()))
+                }
+            }
+
+            impl #impl_type {
+                #[doc = "Returns the reference to the inner error."]
+                #vis fn inner(&self) -> &#input_type {
+                    self.0.inner()
+                }
+
+                #[doc = "Consumes `self` and returns the inner error."]
+                #vis fn into_inner(self) -> #input_type {
+                    self.0.into_inner()
                 }
             }
         );
