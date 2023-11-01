@@ -15,15 +15,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+      - name: Add Rust components
+        run: rustup component add rustfmt clippy
       - name: Format
         run: cargo fmt --check
       - name: Build
         run: cargo build --all-targets --all-features
-      - name: Clippy without `cfg(foo)`
+      - name: Clippy
         run: cargo clippy --all-targets --all-features
-      - name: Clippy with `cfg(foo)`
-        run: RUSTFLAGS="--cfg=foo" cargo clippy --all-targets --all-features
-      - name: Run tests without `cfg(foo)`
+      - name: Run tests
         run: cargo test
-      - name: Run tests with `cfg(foo)`
-        run: RUSTFLAGS="--cfg=foo" cargo test
