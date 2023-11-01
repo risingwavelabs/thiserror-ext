@@ -184,9 +184,13 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
                 let source_ty = variant.source_field().unwrap().ty;
 
                 let ext_name = format_ident!("{}ResultExt", variant_name);
+                let method_name = format_ident!(
+                    "into_{}",
+                    big_camel_case_to_snake_case(&variant_name.to_string())
+                );
                 let doc_trait = format!(
                     "Extension trait for [`Result`] with [`{impl_type}`] error type \
-                     to convert into [`{input_type}::{variant_name}`] with contexts.",
+                     to convert into [`{input_type}::{variant_name}`] with given contexts.",
                 );
                 let doc_method = format!(
                     "Converts [`Result`] into [`{input_type}::{variant_name}`] \
@@ -197,10 +201,10 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
                     #[doc = #doc_trait]
                     #vis trait #ext_name<__T> {
                         #[doc = #doc_method]
-                        fn context(self, #(#other_args)*) -> std::result::Result<__T, #impl_type>;
+                        fn #method_name(self, #(#other_args)*) -> std::result::Result<__T, #impl_type>;
                     }
                     impl<__T> #ext_name<__T> for std::result::Result<__T, #source_ty> {
-                        fn context(self, #(#other_args)*) -> std::result::Result<__T, #impl_type> {
+                        fn #method_name(self, #(#other_args)*) -> std::result::Result<__T, #impl_type> {
                             self.map_err(|#source_arg| #ctor_expr.into())
                         }
                     }
