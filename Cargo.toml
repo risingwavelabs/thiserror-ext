@@ -4,18 +4,14 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Bugen Zhao <i@bugenzhao.com>"]
 description = "Extensions to `thiserror` crate."
-repository = "https://github.com/BugenZhao/thiserror-ext"
-keywords = [] # TODO
-categories = [] # TODO
+repository = "https://github.com/risingwavelabs/thiserror-ext"
+keywords = []                                             # TODO
+categories = []                                           # TODO
 license = "Apache-2.0"
 
-[lib]
-proc-macro = true
-
 [dependencies]
-proc-macro2 = "1"
-quote = "1"
-syn = { version = "2", features = ["full"] }
-
-[dev-dependencies]
 thiserror = "1"
+thiserror-ext-derive = { version = "=0.1.0", path = "derive" }
+
+[workspace]
+members = ["derive"]

@@ -5,7 +5,7 @@ use thiserror::*;
 use thiserror_ext::*;
 
 #[derive(Error, Debug, Constructor, ResultExt, Box)]
-#[thiserror_ext(type = MyError, backtrace)]
+#[thiserror_ext(type = MyError)]
 pub enum MyErrorInner {
     #[error("cannot parse int from `{from}`")]
     Parse {
