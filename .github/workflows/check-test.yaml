@@ -1,0 +1,29 @@
+name: Check and Test
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Format
+        run: cargo fmt --check
+      - name: Build
+        run: cargo build --all-targets --all-features
+      - name: Clippy without `cfg(foo)`
+        run: cargo clippy --all-targets --all-features
+      - name: Clippy with `cfg(foo)`
+        run: RUSTFLAGS="--cfg=foo" cargo clippy --all-targets --all-features
+      - name: Run tests without `cfg(foo)`
+        run: cargo test
+      - name: Run tests with `cfg(foo)`
+        run: RUSTFLAGS="--cfg=foo" cargo test
