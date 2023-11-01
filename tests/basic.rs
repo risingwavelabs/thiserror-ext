@@ -34,4 +34,7 @@ pub enum MyErrorInner {
 
     #[error(transparent)]
     IoTransparent(std::io::Error),
+
+    #[error("unsupported: {0}")]
+    UnsupportedSingleField(String),
 }

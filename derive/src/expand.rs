@@ -91,7 +91,9 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
             ));
         }
 
+        let doc = format!("The boxed type of [`{}`].", input_type);
         let generated = quote!(
+            #[doc = #doc]
             #[derive(thiserror_ext::__private::thiserror::Error, Debug)]
             #[error(transparent)]
             #vis struct #impl_type(
@@ -129,15 +131,12 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
     let mut items = Vec::new();
 
     for variant in input.variants {
-        let Some(source_field) = variant.source_field() else {
-            continue;
-        };
-        if source_field.attrs.from.is_some() {
+        // Why not directly use `From`?
+        if variant.from_field().is_some() {
             continue;
         }
 
         let variant_name = &variant.ident;
-        let source_ty = &source_field.ty;
 
         let Args {
             other_args,
@@ -155,18 +154,37 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
                     "{}",
                     big_camel_case_to_snake_case(&variant_name.to_string())
                 );
+                let doc = format!("Constructs a [`{input_type}::{variant_name}`] variant.");
 
                 quote!(
+                    #[doc = #doc]
                     #vis fn #ctor_name(#source_arg #(#other_args)*) -> Self {
                         #ctor_expr.into()
                     }
                 )
             }
             DeriveType::ResultExt => {
+                // It's implemented on `Result<T, SourceError>`, and we expect there's at
+                // least one argument.
+                if source_arg.is_none() || other_args.is_empty() {
+                    continue;
+                }
+                let source_ty = variant.source_field().unwrap().ty;
+
                 let ext_name = format_ident!("{}ResultExt", variant_name);
+                let doc_trait = format!(
+                    "Extension trait for [`Result`] with [`{impl_type}`] error type \
+                     to convert into [`{input_type}::{variant_name}`] with contexts.",
+                );
+                let doc_method = format!(
+                    "Converts [`Result`] into [`{input_type}::{variant_name}`] \
+                     with the given context.",
+                );
 
                 quote!(
+                    #[doc = #doc_trait]
                     #vis trait #ext_name<__T> {
+                        #[doc = #doc_method]
                         fn context(self, #(#other_args)*) -> std::result::Result<__T, #impl_type>;
                     }
                     impl<__T> #ext_name<__T> for std::result::Result<__T, #source_ty> {
