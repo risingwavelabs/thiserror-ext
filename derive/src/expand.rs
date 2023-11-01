@@ -58,7 +58,7 @@ fn resolve(variant: &Variant<'_>) -> Args {
 }
 
 pub enum DeriveType {
-    Constructor,
+    Construct,
     ResultExt,
     Box,
 }
@@ -161,7 +161,7 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
         });
 
         let item = match t {
-            DeriveType::Constructor => {
+            DeriveType::Construct => {
                 let ctor_name = format_ident!(
                     "{}",
                     big_camel_case_to_snake_case(&variant_name.to_string())
@@ -213,7 +213,7 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
     }
 
     let generated = match t {
-        DeriveType::Constructor => {
+        DeriveType::Construct => {
             quote!(
                 #[automatically_derived]
                 impl #impl_type {

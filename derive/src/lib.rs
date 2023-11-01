@@ -5,11 +5,11 @@ use syn::{parse_macro_input, DeriveInput};
 mod expand;
 mod thiserror;
 
-#[proc_macro_derive(Constructor, attributes(thiserror_ext))]
+#[proc_macro_derive(Construct, attributes(thiserror_ext))]
 pub fn derive_constructor(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
-    expand::derive(&input, DeriveType::Constructor)
+    expand::derive(&input, DeriveType::Construct)
         .unwrap_or_else(|err| err.to_compile_error())
         .into()
 }
