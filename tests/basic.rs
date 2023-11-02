@@ -38,3 +38,6 @@ pub enum MyErrorInner {
     #[error("unsupported: {0}")]
     UnsupportedSingleField(String),
 }
+
+#[test]
+fn test() {}

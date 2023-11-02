@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote};
-use syn::{DeriveInput, GenericArgument, Member, PathArguments, Result, Type};
+use quote::{format_ident, quote, quote_spanned};
+use syn::{spanned::Spanned, DeriveInput, GenericArgument, Member, PathArguments, Result, Type};
 
 use crate::thiserror::ast::{Input, Variant};
 
@@ -164,7 +164,8 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
             DeriveType::Construct => {
                 let ctor_name = format_ident!(
                     "{}",
-                    big_camel_case_to_snake_case(&variant_name.to_string())
+                    big_camel_case_to_snake_case(&variant_name.to_string()),
+                    span = variant.original.span()
                 );
                 let doc = format!("Constructs a [`{input_type}::{variant_name}`] variant.");
 
@@ -176,24 +177,26 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
                 )
             }
             DeriveType::ResultExt => {
-                // It's implemented on `Result<T, SourceError>`, and we expect there's at
-                // least one argument.
+                // It's implemented on `Result<T, SourceError>`, so there's must be the `source` field,
+                // and we expect there's at least one argument.
                 if source_arg.is_none() || other_args.is_empty() {
                     continue;
                 }
                 let source_ty = variant.source_field().unwrap().ty;
 
-                let ext_name = format_ident!("{}ResultExt", variant_name);
+                let ext_name =
+                    format_ident!("{}ResultExt", variant_name, span = variant.original.span());
                 let method_name = format_ident!(
                     "into_{}",
-                    big_camel_case_to_snake_case(&variant_name.to_string())
+                    big_camel_case_to_snake_case(&variant_name.to_string()),
+                    span = variant.original.span()
                 );
                 let doc_trait = format!(
                     "Extension trait for [`Result`] with [`{impl_type}`] error type \
-                     to convert into [`{input_type}::{variant_name}`] with given contexts.",
+                     to convert that into [`{input_type}::{variant_name}`] with the given context.",
                 );
                 let doc_method = format!(
-                    "Converts [`Result`] into [`{input_type}::{variant_name}`] \
+                    "Converts the error type of [`Result`] into [`{input_type}::{variant_name}`] \
                      with the given context.",
                 );
 
