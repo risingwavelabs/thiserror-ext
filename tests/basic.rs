@@ -4,7 +4,7 @@ use std::backtrace::Backtrace;
 use thiserror::*;
 use thiserror_ext::*;
 
-#[derive(Error, Debug, Construct, ResultExt, Box)]
+#[derive(Error, Debug, Construct, ContextInto, Box)]
 #[thiserror_ext(type = MyError)]
 pub enum MyErrorInner {
     #[error("cannot parse int from `{from}`")]

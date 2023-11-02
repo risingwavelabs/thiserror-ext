@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote, quote_spanned};
+use quote::{format_ident, quote, ToTokens};
 use syn::{spanned::Spanned, DeriveInput, GenericArgument, Member, PathArguments, Result, Type};
 
 use crate::thiserror::ast::{Input, Variant};
@@ -59,7 +59,7 @@ fn resolve(variant: &Variant<'_>) -> Args {
 
 pub enum DeriveType {
     Construct,
-    ResultExt,
+    ContextInto,
     Box,
 }
 
@@ -176,39 +176,48 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
                     }
                 )
             }
-            DeriveType::ResultExt => {
+            DeriveType::ContextInto => {
                 // It's implemented on `Result<T, SourceError>`, so there's must be the `source` field,
                 // and we expect there's at least one argument.
                 if source_arg.is_none() || other_args.is_empty() {
                     continue;
                 }
                 let source_ty = variant.source_field().unwrap().ty;
+                let source_ty_name = get_type_string(source_ty);
 
                 let ext_name =
-                    format_ident!("{}ResultExt", variant_name, span = variant.original.span());
+                    format_ident!("Into{}", variant_name, span = variant.original.span());
                 let method_name = format_ident!(
                     "into_{}",
                     big_camel_case_to_snake_case(&variant_name.to_string()),
                     span = variant.original.span()
                 );
                 let doc_trait = format!(
-                    "Extension trait for [`Result`] with [`{impl_type}`] error type \
-                     to convert that into [`{input_type}::{variant_name}`] with the given context.",
+                    "Extension trait for converting [`{source_ty_name}`] \
+                     into [`{input_type}::{variant_name}`] with the given context.",
                 );
                 let doc_method = format!(
-                    "Converts the error type of [`Result`] into [`{input_type}::{variant_name}`] \
-                     with the given context.",
+                    "Converts [`{source_ty_name}`] \
+                     into [`{input_type}::{variant_name}`] with the given context.",
                 );
 
                 quote!(
                     #[doc = #doc_trait]
-                    #vis trait #ext_name<__T> {
+                    #vis trait #ext_name {
+                        type Ret;
                         #[doc = #doc_method]
-                        fn #method_name(self, #(#other_args)*) -> std::result::Result<__T, #impl_type>;
+                        fn #method_name(self, #(#other_args)*) -> Self::Ret;
                     }
-                    impl<__T> #ext_name<__T> for std::result::Result<__T, #source_ty> {
-                        fn #method_name(self, #(#other_args)*) -> std::result::Result<__T, #impl_type> {
+                    impl<__T> #ext_name for std::result::Result<__T, #source_ty> {
+                        type Ret = std::result::Result<__T, #impl_type>;
+                        fn #method_name(self, #(#other_args)*) -> Self::Ret {
                             self.map_err(|#source_arg| #ctor_expr.into())
+                        }
+                    }
+                    impl #ext_name for #source_ty {
+                        type Ret = #impl_type;
+                        fn #method_name(self, #(#other_args)*) -> Self::Ret {
+                            (|#source_arg| #ctor_expr.into())(self)
                         }
                     }
                 )
@@ -228,7 +237,7 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
                 }
             )
         }
-        DeriveType::ResultExt => {
+        DeriveType::ContextInto => {
             quote!(#(#items)*)
         }
         DeriveType::Box => unreachable!(),
@@ -282,4 +291,16 @@ fn type_parameter_of_option(ty: &Type) -> Option<&Type> {
         GenericArgument::Type(arg) => Some(arg),
         _ => None,
     }
+}
+
+fn get_type_string(type_: &Type) -> String {
+    let tokens = type_.to_token_stream();
+    let mut type_string = String::new();
+
+    for token in tokens {
+        let stringified = token.to_string();
+        type_string.push_str(&stringified);
+    }
+
+    type_string
 }
