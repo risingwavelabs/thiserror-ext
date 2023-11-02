@@ -1,7 +1,13 @@
 [package]
 name = "thiserror-ext-derive"
-version = "0.1.0"
-edition = "2021"
+description = "Proc macros of `thiserror-ext`."
+version = { workspace = true }
+edition = { workspace = true }
+authors = { workspace = true }
+repository = { workspace = true }
+keywords = { workspace = true }
+categories = { workspace = true }
+license = { workspace = true }
 
 [lib]
 proc-macro = true

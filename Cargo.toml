@@ -1,17 +1,24 @@
 [package]
 name = "thiserror-ext"
-version = "0.1.0"
-edition = "2021"
-authors = ["Bugen Zhao <i@bugenzhao.com>"]
-description = "Extensions to `thiserror` crate."
-repository = "https://github.com/risingwavelabs/thiserror-ext"
-keywords = []                                             # TODO
-categories = []                                           # TODO
-license = "Apache-2.0"
+description = "Extensions to `thiserror`."
+version = { workspace = true }
+edition = { workspace = true }
+authors = { workspace = true }
+repository = { workspace = true }
+keywords = { workspace = true }
+categories = { workspace = true }
+license = { workspace = true }
 
 [dependencies]
 thiserror = "1"
-thiserror-ext-derive = { version = "=0.1.0", path = "derive" }
+thiserror-ext-derive = { version = "=0.0.1", path = "derive" }
 
 [workspace]
 members = ["derive"]
+package.version = "0.0.1"
+package.edition = "2021"
+package.authors = ["Bugen Zhao <i@bugenzhao.com>"]
+package.repository = "https://github.com/risingwavelabs/thiserror-ext"
+package.keywords = ["error", "error-handling", "derive"]
+package.categories = ["rust-patterns"]
+package.license = "Apache-2.0"
