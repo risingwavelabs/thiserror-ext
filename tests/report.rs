@@ -42,7 +42,7 @@ fn outer() -> Result<(), Outer> {
 #[test]
 fn test_report_display() {
     let expect = expect![[r#"
-        outer error: middle error*: inner error
+        outer error: middle error: inner error
     "#]];
     expect.assert_eq(&format!("{}", outer().unwrap_err().as_report()));
 }
@@ -75,7 +75,7 @@ fn test_report_display_alternate_single_source() {
 #[test]
 fn test_report_debug() {
     let expect = expect![[r#"
-        outer error: middle error*: inner error
+        outer error: middle error: inner error
 
         Backtrace:
         disabled backtrace

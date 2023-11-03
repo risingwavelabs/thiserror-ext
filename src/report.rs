@@ -111,7 +111,8 @@ impl<'a> fmt::Debug for Report<'a> {
 
 impl<'a> Report<'a> {
     fn cleaned_error_trace(&self, f: &mut fmt::Formatter, pretty: bool) -> Result<(), fmt::Error> {
-        const NOTE: &str = "*";
+        // Do not add cleaned-up note for compact formatting.
+        let note = if pretty { "*" } else { "" };
 
         let cleaned_messages: Vec<_> = CleanedErrorText::new(self.0)
             .flat_map(|(_, mut msg, cleaned)| {
@@ -119,7 +120,7 @@ impl<'a> Report<'a> {
                     None
                 } else {
                     if cleaned {
-                        msg += NOTE;
+                        msg += note;
                     }
                     Some(msg)
                 }
