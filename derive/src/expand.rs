@@ -67,12 +67,15 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
     let input_type = input.ident.clone();
 
     let mut impl_type = None;
+    let mut backtrace = false;
     for attr in &input.attrs {
         if attr.path().is_ident("thiserror_ext") {
             attr.parse_nested_meta(|meta| {
                 if meta.path.is_ident("type") {
                     let value = meta.value()?;
                     impl_type = Some(value.parse()?);
+                } else if meta.path.is_ident("backtrace") {
+                    backtrace = true;
                 }
 
                 Ok(())
@@ -91,6 +94,12 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
             ));
         }
 
+        let backtrace_type_param = if backtrace {
+            quote!(thiserror_ext::__private::MaybeBacktrace)
+        } else {
+            quote!(thiserror_ext::__private::NoBacktrace)
+        };
+
         let doc = format!("The boxed type of [`{}`].", input_type);
         let generated = quote!(
             #[doc = #doc]
@@ -99,7 +108,10 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
             #vis struct #impl_type(
                 #[from]
                 #[backtrace]
-                thiserror_ext::__private::ErrorBox<#input_type>,
+                thiserror_ext::__private::ErrorBox<
+                    #input_type,
+                    #backtrace_type_param,
+                >,
             );
 
             // For `?` to work.
