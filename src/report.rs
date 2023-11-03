@@ -20,7 +20,7 @@ use std::{backtrace::Backtrace, fmt};
 mod private {
     pub trait Sealed {}
 
-    impl Sealed for dyn std::error::Error {}
+    impl<T: std::error::Error> Sealed for T {}
 }
 
 /// Extension trait for [`std::error::Error`] that provides a [`Report`]
@@ -31,7 +31,7 @@ pub trait AsReport: private::Sealed {
     fn as_report(&self) -> Report<'_>;
 }
 
-impl AsReport for dyn std::error::Error {
+impl<T: std::error::Error> AsReport for T {
     fn as_report(&self) -> Report<'_> {
         Report(self)
     }
@@ -102,7 +102,7 @@ impl<'a> fmt::Debug for Report<'a> {
         self.cleaned_error_trace(f, f.alternate())?;
 
         if let Some(bt) = std::error::request_ref::<Backtrace>(self.0) {
-            writeln!(f, "\nBacktrace:\n{:?}", bt)?;
+            writeln!(f, "\nBacktrace:\n{}", bt)?;
         }
 
         Ok(())
@@ -111,7 +111,7 @@ impl<'a> fmt::Debug for Report<'a> {
 
 impl<'a> Report<'a> {
     fn cleaned_error_trace(&self, f: &mut fmt::Formatter, pretty: bool) -> Result<(), fmt::Error> {
-        const NOTE: &str = "..";
+        const NOTE: &str = "*";
 
         let cleaned_messages: Vec<_> = CleanedErrorText::new(self.0)
             .flat_map(|(_, mut msg, cleaned)| {
@@ -133,13 +133,16 @@ impl<'a> Report<'a> {
             None => return Ok(()),
         };
 
-        writeln!(f, "{}", head)?;
+        write!(f, "{}", head)?;
 
         if pretty {
             match cleaned_messages.len() {
                 0 | 1 => {}
-                2 => writeln!(f, "\nCaused by this error:")?,
-                _ => writeln!(f, "\nCaused by these errors (recent errors listed first):")?,
+                2 => writeln!(f, "\n\nCaused by this error:")?,
+                _ => writeln!(
+                    f,
+                    "\n\nCaused by these errors (recent errors listed first):"
+                )?,
             }
 
             for (i, msg) in visible_messages.enumerate() {
@@ -149,8 +152,9 @@ impl<'a> Report<'a> {
             }
         } else {
             for msg in visible_messages {
-                writeln!(f, ": {}", msg)?;
+                write!(f, ": {}", msg)?;
             }
+            writeln!(f)?;
         }
 
         Ok(())

@@ -13,6 +13,9 @@ license = { workspace = true }
 thiserror = "1"
 thiserror-ext-derive = { version = "=0.0.1", path = "derive" }
 
+[dev-dependencies]
+expect-test = "1"
+
 [workspace]
 members = ["derive"]
 package.version = "0.0.1"
