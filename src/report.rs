@@ -102,6 +102,10 @@ impl<'a> fmt::Debug for Report<'a> {
         self.cleaned_error_trace(f, f.alternate())?;
 
         if let Some(bt) = std::error::request_ref::<Backtrace>(self.0) {
+            // Print a newline if we're not in alternate mode.
+            if !f.alternate() {
+                writeln!(f)?;
+            }
             writeln!(f, "\nBacktrace:\n{}", bt)?;
         }
 
@@ -140,10 +144,10 @@ impl<'a> Report<'a> {
                 writeln!(f, "{:3}: {}", i, msg)?;
             }
         } else {
+            // No newline at the end.
             for msg in visible_messages {
                 write!(f, ": {}", msg)?;
             }
-            writeln!(f)?;
         }
 
         Ok(())

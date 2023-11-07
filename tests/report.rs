@@ -15,7 +15,7 @@ struct Middle {
     #[from]
     source: Inner,
     #[backtrace]
-    backtrace: std::backtrace::Backtrace,
+    backtrace: Option<std::backtrace::Backtrace>,
 }
 
 #[derive(Error, Debug)]
@@ -39,27 +39,34 @@ fn inner() -> Result<(), Inner> {
     Err(Inner {})
 }
 
-fn middle() -> Result<(), Middle> {
-    inner()?;
+fn middle(bt: bool) -> Result<(), Middle> {
+    inner().map_err(|e| {
+        if bt {
+            Middle::from(e)
+        } else {
+            Middle {
+                source: e,
+                backtrace: None,
+            }
+        }
+    })?;
     Ok(())
 }
 
-fn middle_transparent() -> Result<(), MiddleTransparent> {
-    middle()?;
+fn middle_transparent(bt: bool) -> Result<(), MiddleTransparent> {
+    middle(bt)?;
     Ok(())
 }
 
-fn outer() -> Result<(), Outer> {
-    middle_transparent()?;
+fn outer(bt: bool) -> Result<(), Outer> {
+    middle_transparent(bt)?;
     Ok(())
 }
 
 #[test]
 fn test_report_display() {
-    let expect = expect![[r#"
-        outer error: middle error: inner error
-    "#]];
-    expect.assert_eq(&format!("{}", outer().unwrap_err().as_report()));
+    let expect = expect!["outer error: middle error: inner error"];
+    expect.assert_eq(&format!("{}", outer(true).unwrap_err().as_report()));
 }
 
 #[test]
@@ -71,7 +78,7 @@ fn test_report_display_alternate() {
           1: middle error
           2: inner error
     "#]];
-    expect.assert_eq(&format!("{:#}", outer().unwrap_err().as_report()));
+    expect.assert_eq(&format!("{:#}", outer(true).unwrap_err().as_report()));
 }
 
 #[test]
@@ -82,7 +89,7 @@ fn test_report_display_alternate_single_source() {
         Caused by this error:
           1: inner error
     "#]];
-    expect.assert_eq(&format!("{:#}", middle().unwrap_err().as_report()));
+    expect.assert_eq(&format!("{:#}", middle(true).unwrap_err().as_report()));
 }
 
 // Show that there's extra backtrace information compared to `Display`.
@@ -95,7 +102,14 @@ fn test_report_debug() {
         Backtrace:
         disabled backtrace
     "#]];
-    expect.assert_eq(&format!("{:?}", outer().unwrap_err().as_report()));
+    expect.assert_eq(&format!("{:?}", outer(true).unwrap_err().as_report()));
+}
+
+// If there's no backtrace, the behavior should be exactly the same as `Display`.
+#[test]
+fn test_report_debug_no_backtrace() {
+    let expect = expect!["outer error: middle error: inner error"];
+    expect.assert_eq(&format!("{:?}", outer(false).unwrap_err().as_report()));
 }
 
 // Show that there's extra backtrace information compared to `Display`.
@@ -112,5 +126,18 @@ fn test_report_debug_alternate() {
         Backtrace:
         disabled backtrace
     "#]];
-    expect.assert_eq(&format!("{:#?}", outer().unwrap_err().as_report()));
+    expect.assert_eq(&format!("{:#?}", outer(true).unwrap_err().as_report()));
+}
+
+// If there's no backtrace, the behavior should be exactly the same as `Display`.
+#[test]
+fn test_report_debug_alternate_no_backtrace() {
+    let expect = expect![[r#"
+        outer error
+
+        Caused by these errors (recent errors listed first):
+          1: middle error
+          2: inner error
+    "#]];
+    expect.assert_eq(&format!("{:#?}", outer(false).unwrap_err().as_report()));
 }
