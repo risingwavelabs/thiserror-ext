@@ -9,7 +9,8 @@ use thiserror_ext::AsReport;
 struct Inner {}
 
 #[derive(Error, Debug)]
-#[error("middle error: {source}")] // Some error may include source message in its message
+#[error("middle error: {source}")] // some error may include source message in its message
+                                   // the suffix should be cleaned up
 struct Middle {
     #[from]
     source: Inner,
@@ -18,11 +19,20 @@ struct Middle {
 }
 
 #[derive(Error, Debug)]
+#[error("{source}")] // some may duplicate source message to emulate `#[transparent]`
+                     // the whole message should be cleaned up (as it's empty after removing source message)
+struct MiddleTransparent {
+    #[from]
+    #[backtrace]
+    source: Middle,
+}
+
+#[derive(Error, Debug)]
 #[error("outer error")] // but the best practice is to not include
 struct Outer {
     #[from]
     #[backtrace]
-    source: Middle,
+    source: MiddleTransparent,
 }
 
 fn inner() -> Result<(), Inner> {
@@ -34,8 +44,13 @@ fn middle() -> Result<(), Middle> {
     Ok(())
 }
 
-fn outer() -> Result<(), Outer> {
+fn middle_transparent() -> Result<(), MiddleTransparent> {
     middle()?;
+    Ok(())
+}
+
+fn outer() -> Result<(), Outer> {
+    middle_transparent()?;
     Ok(())
 }
 
@@ -53,7 +68,7 @@ fn test_report_display_alternate() {
         outer error
 
         Caused by these errors (recent errors listed first):
-          1: middle error*
+          1: middle error
           2: inner error
     "#]];
     expect.assert_eq(&format!("{:#}", outer().unwrap_err().as_report()));
@@ -62,7 +77,7 @@ fn test_report_display_alternate() {
 #[test]
 fn test_report_display_alternate_single_source() {
     let expect = expect![[r#"
-        middle error*
+        middle error
 
         Caused by this error:
           1: inner error
@@ -91,7 +106,7 @@ fn test_report_debug_alternate() {
         outer error
 
         Caused by these errors (recent errors listed first):
-          1: middle error*
+          1: middle error
           2: inner error
 
         Backtrace:

@@ -43,7 +43,7 @@ impl<T: std::error::Error> AsReport for T {
 /// # Formatting
 ///
 /// The report can be formatted using [`fmt::Display`] or [`fmt::Debug`],
-/// and differs based on the alternate flag (`#`).
+/// which differs based on the alternate flag (`#`).
 ///
 /// - Without the alternate flag, the error is formatted in a compact way:
 ///   ```text
@@ -111,20 +111,8 @@ impl<'a> fmt::Debug for Report<'a> {
 
 impl<'a> Report<'a> {
     fn cleaned_error_trace(&self, f: &mut fmt::Formatter, pretty: bool) -> Result<(), fmt::Error> {
-        // Do not add cleaned-up note for compact formatting.
-        let note = if pretty { "*" } else { "" };
-
         let cleaned_messages: Vec<_> = CleanedErrorText::new(self.0)
-            .flat_map(|(_, mut msg, cleaned)| {
-                if msg.is_empty() {
-                    None
-                } else {
-                    if cleaned {
-                        msg += note;
-                    }
-                    Some(msg)
-                }
-            })
+            .flat_map(|(_error, msg, _cleaned)| Some(msg).filter(|msg| !msg.is_empty()))
             .collect();
 
         let mut visible_messages = cleaned_messages.iter();
