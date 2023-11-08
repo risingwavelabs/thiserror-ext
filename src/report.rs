@@ -17,15 +17,9 @@
 
 use std::{backtrace::Backtrace, fmt};
 
-mod private {
-    pub trait Sealed {}
-
-    impl<T: std::error::Error> Sealed for T {}
-}
-
 /// Extension trait for [`std::error::Error`] that provides a [`Report`]
 /// that formats the error and its sources in a cleaned-up way.
-pub trait AsReport: private::Sealed {
+pub trait AsReport: crate::error_sealed::Sealed {
     /// Returns a [`Report`] that formats the error and its sources in a
     /// cleaned-up way.
     fn as_report(&self) -> Report<'_>;
@@ -36,6 +30,19 @@ impl<T: std::error::Error> AsReport for T {
         Report(self)
     }
 }
+
+macro_rules! impl_as_report {
+    ($({$ty:ty },)*) => {
+        $(
+            impl AsReport for $ty {
+                fn as_report(&self) -> Report<'_> {
+                    Report(self)
+                }
+            }
+        )*
+    };
+}
+crate::for_dyn_error_types! { impl_as_report }
 
 /// A wrapper around an error that provides a cleaned up error trace for
 /// display and debug formatting.

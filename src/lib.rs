@@ -13,3 +13,31 @@ pub mod __private {
     pub use crate::error_box::ErrorBox;
     pub use thiserror;
 }
+
+macro_rules! for_dyn_error_types {
+    ($macro:ident) => {
+        $macro! {
+            { dyn std::error::Error },
+            { dyn std::error::Error + Send },
+            { dyn std::error::Error + Sync },
+            { dyn std::error::Error + Send + Sync },
+            { dyn std::error::Error + Send + Sync + std::panic::UnwindSafe },
+        }
+    };
+}
+pub(crate) use for_dyn_error_types;
+
+pub(crate) mod error_sealed {
+    pub trait Sealed {}
+
+    impl<T: std::error::Error> Sealed for T {}
+
+    macro_rules! impl_sealed {
+        ($({$ty:ty },)*) => {
+            $(
+                impl Sealed for $ty {}
+            )*
+        };
+    }
+    for_dyn_error_types! { impl_sealed }
+}
