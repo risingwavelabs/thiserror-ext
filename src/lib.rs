@@ -1,9 +1,11 @@
 #![feature(error_generic_member_access)] // TODO: it's nightly-only
 
+mod as_dyn;
 mod backtrace;
 mod error_box;
 mod report;
 
+pub use as_dyn::AsDyn;
 pub use report::{AsReport, Report};
 pub use thiserror_ext_derive::{Box, Construct, ContextInto};
 
