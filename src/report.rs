@@ -201,17 +201,21 @@ impl<'a> Report<'a> {
         if pretty {
             match cleaned_messages.len() {
                 0 | 1 => {}
-                2 => writeln!(f, "\n\nCaused by this error:")?,
-                _ => writeln!(
-                    f,
-                    "\n\nCaused by these errors (recent errors listed first):"
-                )?,
-            }
-
-            for (i, msg) in visible_messages.enumerate() {
-                // Let's use 1-based indexing for presentation
-                let i = i + 1;
-                writeln!(f, "{:3}: {}", i, msg)?;
+                2 => {
+                    writeln!(f, "\n\nCaused by:")?;
+                    writeln!(f, "  {}", visible_messages.next().unwrap())?;
+                }
+                _ => {
+                    writeln!(
+                        f,
+                        "\n\nCaused by these errors (recent errors listed first):"
+                    )?;
+                    for (i, msg) in visible_messages.enumerate() {
+                        // Let's use 1-based indexing for presentation
+                        let i = i + 1;
+                        writeln!(f, "{:3}: {}", i, msg)?;
+                    }
+                }
             }
         } else {
             // No newline at the end.

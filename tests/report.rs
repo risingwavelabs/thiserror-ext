@@ -86,8 +86,8 @@ fn test_report_display_alternate_single_source() {
     let expect = expect![[r#"
         middle error
 
-        Caused by this error:
-          1: inner error
+        Caused by:
+          inner error
     "#]];
     expect.assert_eq(&format!("{:#}", middle(true).unwrap_err().as_report()));
 }
