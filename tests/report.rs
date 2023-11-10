@@ -1,6 +1,7 @@
 #![feature(error_generic_member_access)]
 
 use expect_test::expect;
+use sealed_test::prelude::*;
 use thiserror::Error;
 use thiserror_ext::AsReport;
 
@@ -94,7 +95,7 @@ fn test_report_display_alternate_single_source() {
 
 // Show that there's extra backtrace information compared to `Display`.
 // Backtrace is intentionally disabled to make the test deterministic.
-#[test]
+#[sealed_test(env = [("RUST_BACKTRACE", "0")])]
 fn test_report_debug() {
     let expect = expect![[r#"
         outer error: middle error: inner error
@@ -114,7 +115,7 @@ fn test_report_debug_no_backtrace() {
 
 // Show that there's extra backtrace information compared to `Display`.
 // Backtrace is intentionally disabled to make the test deterministic.
-#[test]
+#[sealed_test(env = [("RUST_BACKTRACE", "0")])]
 fn test_report_debug_alternate() {
     let expect = expect![[r#"
         outer error

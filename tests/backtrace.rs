@@ -2,6 +2,7 @@
 
 use std::backtrace::Backtrace;
 
+use sealed_test::prelude::*;
 use thiserror::Error;
 use thiserror_ext_derive::Box;
 
@@ -47,7 +48,7 @@ fn parse_int(input: &str) -> Result<i32, MyError> {
     Ok(parse_inner(input)?) // backtrace captured here by generated `MyError`
 }
 
-#[test]
+#[sealed_test(env = [("RUST_BACKTRACE", "1")])]
 fn test_with_source_backtrace() {
     let error = parse_float_with_backtrace("not a number").unwrap_err();
     let backtrace = std::error::request_ref::<Backtrace>(&error)
@@ -57,7 +58,7 @@ fn test_with_source_backtrace() {
     assert!(backtrace.contains("parse_inner"), "{backtrace}");
 }
 
-#[test]
+#[sealed_test(env = [("RUST_BACKTRACE", "1")])]
 fn test_without_source_backtrace() {
     let error = parse_int("not a number").unwrap_err();
     let backtrace = std::error::request_ref::<Backtrace>(&error)
