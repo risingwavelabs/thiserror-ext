@@ -23,6 +23,69 @@ pub trait AsReport: crate::error_sealed::Sealed {
     /// Returns a [`Report`] that formats the error and its sources in a
     /// cleaned-up way.
     fn as_report(&self) -> Report<'_>;
+
+    /// Converts the error to a [`Report`] and formats it in a compact way.
+    ///
+    /// This is equivalent to `format!("{}", self.as_report())`.
+    ///
+    /// ## Example
+    /// ```text
+    /// outer error: middle error: inner error
+    /// ```
+    fn to_report_string(&self) -> String {
+        format!("{}", self.as_report())
+    }
+
+    /// Converts the error to a [`Report`] and formats it in a compact way,
+    /// including backtraces if available.
+    ///
+    /// This is equivalent to `format!("{:?}", self.as_report())`.
+    ///
+    /// ## Example
+    /// ```text
+    /// outer error: middle error: inner error
+    ///
+    /// Backtrace:
+    ///   ...
+    /// ```
+    fn to_report_string_with_backtrace(&self) -> String {
+        format!("{:?}", self.as_report())
+    }
+
+    /// Converts the error to a [`Report`] and formats it in a pretty way.
+    ///
+    /// This is equivalent to `format!("{:#}", self.as_report())`.
+    ///
+    /// ## Example
+    /// ```text
+    /// outer error
+    ///
+    /// Caused by these errors (recent errors listed first):
+    ///   1: middle error
+    ///   2: inner error
+    /// ```
+    fn to_report_string_pretty(&self) -> String {
+        format!("{:#}", self.as_report())
+    }
+
+    /// Converts the error to a [`Report`] and formats it in a pretty way,
+    ///
+    /// including backtraces if available.
+    ///
+    /// ## Example
+    /// ```text
+    /// outer error
+    ///
+    /// Caused by these errors (recent errors listed first):
+    ///   1: middle error
+    ///   2: inner error
+    ///
+    /// Backtrace:
+    ///   ...
+    /// ```
+    fn to_report_string_pretty_with_backtrace(&self) -> String {
+        format!("{:#?}", self.as_report())
+    }
 }
 
 impl<T: std::error::Error> AsReport for T {
