@@ -11,7 +11,7 @@ license = { workspace = true }
 
 [dependencies]
 thiserror = "1"
-thiserror-ext-derive = { version = "=0.0.6", path = "derive" }
+thiserror-ext-derive = { version = "=0.0.7", path = "derive" }
 
 [dev-dependencies]
 expect-test = "1"
@@ -19,7 +19,7 @@ sealed_test = "1"
 
 [workspace]
 members = ["derive"]
-package.version = "0.0.6"
+package.version = "0.0.7"
 package.edition = "2021"
 package.authors = ["Bugen Zhao <i@bugenzhao.com>"]
 package.repository = "https://github.com/risingwavelabs/thiserror-ext"
