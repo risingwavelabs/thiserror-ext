@@ -10,7 +10,12 @@ struct Args {
     ctor_args: Vec<TokenStream>,
 }
 
-fn resolve(variant: &Variant<'_>) -> Args {
+enum SourceInto {
+    Yes,
+    No,
+}
+
+fn resolve(variant: &Variant<'_>, source_into: SourceInto) -> Args {
     let mut other_args = Vec::new();
     let mut source_arg = None;
     let mut ctor_args = Vec::new();
@@ -42,8 +47,16 @@ fn resolve(variant: &Variant<'_>) -> Args {
             };
             ctor_args.push(quote!(#member: #expr,))
         } else if field.attrs.source.is_some() {
-            source_arg = Some(quote!(#name: #ty,));
-            ctor_args.push(quote!(#member: #name,));
+            match source_into {
+                SourceInto::Yes => {
+                    source_arg = Some(quote!(#name: impl Into<#ty>,));
+                    ctor_args.push(quote!(#member: #name.into(),));
+                }
+                SourceInto::No => {
+                    source_arg = Some(quote!(#name: #ty,));
+                    ctor_args.push(quote!(#member: #name,));
+                }
+            }
         } else {
             other_args.push(quote!(#name: impl Into<#ty>,));
             ctor_args.push(quote!(#member: #name.into(),));
@@ -166,7 +179,14 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
             other_args,
             source_arg,
             ctor_args,
-        } = resolve(&variant);
+        } = resolve(
+            &variant,
+            match t {
+                DeriveType::Construct => SourceInto::Yes,
+                DeriveType::ContextInto => SourceInto::No,
+                DeriveType::Box => unreachable!(),
+            },
+        );
 
         let ctor_expr = quote!(#input_type::#variant_name {
             #(#ctor_args)*
