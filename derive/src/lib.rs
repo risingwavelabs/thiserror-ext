@@ -1,4 +1,4 @@
-use expand::DeriveType;
+use expand::DeriveCtorType;
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, DeriveInput};
 
@@ -9,7 +9,7 @@ mod thiserror;
 pub fn derive_constructor(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
-    expand::derive(&input, DeriveType::Construct)
+    expand::derive_ctor(&input, DeriveCtorType::Construct)
         .unwrap_or_else(|err| err.to_compile_error())
         .into()
 }
@@ -18,7 +18,7 @@ pub fn derive_constructor(input: TokenStream) -> TokenStream {
 pub fn derive_context_into(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
-    expand::derive(&input, DeriveType::ContextInto)
+    expand::derive_ctor(&input, DeriveCtorType::ContextInto)
         .unwrap_or_else(|err| err.to_compile_error())
         .into()
 }
@@ -27,7 +27,7 @@ pub fn derive_context_into(input: TokenStream) -> TokenStream {
 pub fn derive_box(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
-    expand::derive(&input, DeriveType::Box)
+    expand::derive_box(&input)
         .unwrap_or_else(|err| err.to_compile_error())
         .into()
 }

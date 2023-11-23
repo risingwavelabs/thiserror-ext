@@ -1,6 +1,8 @@
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
-use syn::{spanned::Spanned, DeriveInput, GenericArgument, Member, PathArguments, Result, Type};
+use syn::{
+    spanned::Spanned, DeriveInput, GenericArgument, Ident, Member, PathArguments, Result, Type,
+};
 
 use crate::thiserror::ast::{Input, Variant};
 
@@ -15,7 +17,7 @@ enum SourceInto {
     No,
 }
 
-fn resolve(variant: &Variant<'_>, source_into: SourceInto) -> Args {
+fn resolve_variant_args(variant: &Variant<'_>, source_into: SourceInto) -> Args {
     let mut other_args = Vec::new();
     let mut source_arg = None;
     let mut ctor_args = Vec::new();
@@ -70,17 +72,15 @@ fn resolve(variant: &Variant<'_>, source_into: SourceInto) -> Args {
     }
 }
 
-pub enum DeriveType {
-    Construct,
-    ContextInto,
-    Box,
+struct DeriveMeta {
+    impl_type: Ident,
+    backtrace: bool,
 }
 
-pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
-    let input_type = input.ident.clone();
-
+fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
     let mut impl_type = None;
     let mut backtrace = false;
+
     for attr in &input.attrs {
         if attr.path().is_ident("thiserror_ext") {
             attr.parse_nested_meta(|meta| {
@@ -95,63 +95,89 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
             })?;
         }
     }
-    let impl_type = impl_type.unwrap_or_else(|| input_type.clone());
+    let impl_type = impl_type.unwrap_or_else(|| input.ident.clone());
 
+    Ok(DeriveMeta {
+        impl_type,
+        backtrace,
+    })
+}
+
+pub enum DeriveCtorType {
+    Construct,
+    ContextInto,
+}
+
+pub fn derive_box(input: &DeriveInput) -> Result<TokenStream> {
+    let input_type = input.ident.clone();
     let vis = &input.vis;
 
-    if let DeriveType::Box = t {
-        if impl_type == input_type {
-            return Err(syn::Error::new_spanned(
-                input,
-                "should specify a different type for `Box` derive with `#[thiserror_ext(type = <type>)]`",
-            ));
-        }
+    let DeriveMeta {
+        impl_type,
+        backtrace,
+    } = resolve_meta(input)?;
 
-        let backtrace_type_param = if backtrace {
-            quote!(thiserror_ext::__private::MaybeBacktrace)
-        } else {
-            quote!(thiserror_ext::__private::NoBacktrace)
-        };
+    if impl_type == input_type {
+        return Err(syn::Error::new_spanned(
+            input,
+            "should specify a different type for `Box` derive with `#[thiserror_ext(type = <type>)]`",
+        ));
+    }
 
-        let doc = format!("The boxed type of [`{}`].", input_type);
-        let generated = quote!(
-            #[doc = #doc]
-            #[derive(thiserror_ext::__private::thiserror::Error, Debug)]
-            #[error(transparent)]
-            #vis struct #impl_type(
-                #[from]
-                #[backtrace]
-                thiserror_ext::__private::ErrorBox<
-                    #input_type,
-                    #backtrace_type_param,
-                >,
-            );
+    let backtrace_type_param = if backtrace {
+        quote!(thiserror_ext::__private::MaybeBacktrace)
+    } else {
+        quote!(thiserror_ext::__private::NoBacktrace)
+    };
 
-            // For `?` to work.
-            impl<E> From<E> for #impl_type
-            where
-                E: Into<#input_type>,
-            {
-                fn from(error: E) -> Self {
-                    Self(thiserror_ext::__private::ErrorBox::new(error.into()))
-                }
-            }
-
-            impl #impl_type {
-                #[doc = "Returns the reference to the inner error."]
-                #vis fn inner(&self) -> &#input_type {
-                    self.0.inner()
-                }
-
-                #[doc = "Consumes `self` and returns the inner error."]
-                #vis fn into_inner(self) -> #input_type {
-                    self.0.into_inner()
-                }
-            }
+    let doc = format!("The boxed type of [`{}`].", input_type);
+    let generated = quote!(
+        #[doc = #doc]
+        #[derive(thiserror_ext::__private::thiserror::Error, Debug)]
+        #[error(transparent)]
+        #vis struct #impl_type(
+            #[from]
+            #[backtrace]
+            thiserror_ext::__private::ErrorBox<
+                #input_type,
+                #backtrace_type_param,
+            >,
         );
 
-        return Ok(generated);
-    }
+        // For `?` to work.
+        impl<E> From<E> for #impl_type
+        where
+            E: Into<#input_type>,
+        {
+            fn from(error: E) -> Self {
+                Self(thiserror_ext::__private::ErrorBox::new(error.into()))
+            }
+        }
+
+        impl #impl_type {
+            #[doc = "Returns the reference to the inner error."]
+            #vis fn inner(&self) -> &#input_type {
+                self.0.inner()
+            }
+
+            #[doc = "Consumes `self` and returns the inner error."]
+            #vis fn into_inner(self) -> #input_type {
+                self.0.into_inner()
+            }
+        }
+    );
+
+    Ok(generated)
+}
+
+pub fn derive_ctor(input: &DeriveInput, t: DeriveCtorType) -> Result<TokenStream> {
+    let input_type = input.ident.clone();
+    let vis = &input.vis;
+
+    let DeriveMeta {
+        impl_type,
+        backtrace: _,
+    } = resolve_meta(input)?;
 
     let input = Input::from_syn(input)?;
 
@@ -179,12 +205,11 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
             other_args,
             source_arg,
             ctor_args,
-        } = resolve(
+        } = resolve_variant_args(
             &variant,
             match t {
-                DeriveType::Construct => SourceInto::Yes,
-                DeriveType::ContextInto => SourceInto::No,
-                DeriveType::Box => unreachable!(),
+                DeriveCtorType::Construct => SourceInto::Yes,
+                DeriveCtorType::ContextInto => SourceInto::No,
             },
         );
 
@@ -193,7 +218,7 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
         });
 
         let item = match t {
-            DeriveType::Construct => {
+            DeriveCtorType::Construct => {
                 let ctor_name = format_ident!(
                     "{}",
                     big_camel_case_to_snake_case(&variant_name.to_string()),
@@ -208,7 +233,7 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
                     }
                 )
             }
-            DeriveType::ContextInto => {
+            DeriveCtorType::ContextInto => {
                 // It's implemented on `Result<T, SourceError>`, so there's must be the `source` field,
                 // and we expect there's at least one argument.
                 if source_arg.is_none() || other_args.is_empty() {
@@ -254,14 +279,13 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
                     }
                 )
             }
-            DeriveType::Box => unreachable!(),
         };
 
         items.push(item);
     }
 
     let generated = match t {
-        DeriveType::Construct => {
+        DeriveCtorType::Construct => {
             quote!(
                 #[automatically_derived]
                 impl #impl_type {
@@ -269,10 +293,9 @@ pub fn derive(input: &DeriveInput, t: DeriveType) -> Result<TokenStream> {
                 }
             )
         }
-        DeriveType::ContextInto => {
+        DeriveCtorType::ContextInto => {
             quote!(#(#items)*)
         }
-        DeriveType::Box => unreachable!(),
     };
 
     Ok(generated)
