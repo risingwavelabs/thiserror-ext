@@ -115,7 +115,7 @@ fn resolve_variant_args_for_macro(variant: &Variant<'_>) -> MacroArgs {
         } else {
             other_args.push(quote!(#name = $#name:expr,));
             other_call_args.push(quote!(#name));
-            ctor_args.push(quote!(#member: $#name.into(),));
+            ctor_args.push(quote!(#member: $#name,));
         }
     }
 
@@ -411,29 +411,29 @@ pub fn derive_macro(input: &DeriveInput) -> Result<TokenStream> {
         let message_arg = quote!($($fmt_arg:tt)*);
         let message_call_arg = quote!($($fmt_arg)*);
 
-        for bitset in (0..((1 << len) - 1)).rev() {
+        for bitset in (0..(1 << len)).rev() {
             let mut args = Vec::new();
             let mut call_args = Vec::new();
             for (i, (arg, call_arg)) in (other_args.iter()).zip(other_call_args.iter()).enumerate()
             {
                 if bitset & (1 << i) != 0 {
                     args.push(arg);
-                    call_args.push(quote!(#call_arg = $#call_arg,));
+                    call_args.push(quote!(#call_arg = $#call_arg.into(),));
                 } else {
-                    call_args.push(quote!(#call_arg = ::std::option::Option::None,));
+                    call_args.push(quote!(#call_arg = ::std::default::Default::default(),));
                 }
             }
 
             let arm = quote!(
                 (#(#args)* #message_arg) => {
-                    #ctor_name!(#(#call_args)* #message_call_arg)
+                    #ctor_name!(@ #(#call_args)* #message_call_arg)
                 };
             );
             arms.push(arm);
         }
 
         let full = quote!(
-            (#(#other_args)* #message_arg) => {{
+            (@ #(#other_args)* #message_arg) => {{
                 let res: #impl_type = (#ctor_expr).into();
                 res
             }};
