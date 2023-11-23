@@ -1,3 +1,4 @@
+use either::{for_both, Either};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use syn::{
@@ -5,7 +6,7 @@ use syn::{
     Visibility,
 };
 
-use crate::thiserror::ast::{Input, Variant};
+use crate::thiserror::ast::{Field, Input, Variant};
 
 struct Args {
     other_args: Vec<TokenStream>,
@@ -85,12 +86,12 @@ struct MacroArgs {
     ctor_args: Vec<TokenStream>,
 }
 
-fn resolve_variant_args_for_macro(variant: &Variant<'_>) -> MacroArgs {
+fn resolve_args_for_macro(fields: &[Field<'_>]) -> MacroArgs {
     let mut other_args = Vec::new();
     let mut other_call_args = Vec::new();
     let mut ctor_args = Vec::new();
 
-    for (i, field) in variant.fields.iter().enumerate() {
+    for (i, field) in fields.iter().enumerate() {
         let ty = &field.ty;
         let member = &field.member;
 
@@ -367,53 +368,67 @@ pub fn derive_macro_inner(input: &DeriveInput, bail: bool) -> Result<TokenStream
 
     let input = Input::from_syn(input)?;
 
-    let input = match input {
-        Input::Struct(input) => {
-            return Err(syn::Error::new_spanned(
-                input.original,
-                "only `enum` is supported for `thiserror_ext`",
-            ))
-        }
-        Input::Enum(input) => input,
+    let variants = match input {
+        Input::Struct(input) => vec![Either::Left(input)],
+        Input::Enum(input) => input.variants.into_iter().map(Either::Right).collect(),
     };
 
     let mut items = Vec::new();
 
-    for variant in input.variants {
+    for variant in variants {
         // We only care about variants with `message` field and no `source` or `from` field.
-        if variant.message_field().is_none() || variant.source_field().is_some() {
+        if for_both!(&variant, v => v.message_field()).is_none()
+            || for_both!(&variant, v => v.source_field()).is_some()
+        {
             continue;
         }
 
-        let variant_name = &variant.ident;
+        let variant_name = for_both!(&variant, v => &v.ident);
+        let ctor_path = match &variant {
+            Either::Left(_s) => quote!(#input_type),
+            Either::Right(_v) => quote!(#input_type::#variant_name),
+        };
+
+        let fields = for_both!(&variant, v => &v.fields);
 
         let MacroArgs {
             other_args,
             other_call_args,
             ctor_args,
-        } = resolve_variant_args_for_macro(&variant);
+        } = resolve_args_for_macro(fields);
 
-        let ctor_expr = quote!(#input_type::#variant_name {
+        let ctor_expr = quote!(#ctor_path {
             #(#ctor_args)*
         });
 
         let bail_prefix = if bail { "bail_" } else { "" };
         let bail_suffix = if bail { "__bail" } else { "" };
 
+        let ctor_span = for_both!(&variant, v => v.ident.span());
+
         let export_name = format_ident!(
             "{}{}",
             bail_prefix,
             big_camel_case_to_snake_case(&variant_name.to_string()),
-            span = variant.original.span()
+            span = ctor_span,
         );
         let mangled_name = format_ident!(
-            "__thiserror_ext_macro_{}__{}{}",
+            "__thiserror_ext_macro__{}__{}{}",
             big_camel_case_to_snake_case(&input_type.to_string()),
             big_camel_case_to_snake_case(&variant_name.to_string()),
             bail_suffix,
+            span = ctor_span,
         );
 
-        let doc = format!("Constructs a [`{input_type}::{variant_name}`] variant.");
+        let bail_doc = if bail { " and bails out" } else { "" };
+        let doc = match &variant {
+            Either::Left(_s) => {
+                format!("Constructs a [`{input_type}`]{bail_doc}.")
+            }
+            Either::Right(_v) => {
+                format!("Constructs a [`{input_type}::{variant_name}`] variant{bail_doc}.")
+            }
+        };
 
         let mut arms = Vec::new();
 
@@ -475,6 +490,7 @@ pub fn derive_macro_inner(input: &DeriveInput, bail: bool) -> Result<TokenStream
                 #(#arms)*
             }
 
+            #[allow(unused_imports)]
             #vis use #mangled_name as #export_name;
         );
 
