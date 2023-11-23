@@ -130,11 +130,13 @@ fn resolve_args_for_macro(fields: &[Field<'_>]) -> MacroArgs {
 struct DeriveMeta {
     impl_type: Ident,
     backtrace: bool,
+    macro_mangle: bool,
 }
 
 fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
     let mut impl_type = None;
     let mut backtrace = false;
+    let mut macro_mangle = false;
 
     for attr in &input.attrs {
         if attr.path().is_ident("thiserror_ext") {
@@ -144,6 +146,13 @@ fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
                     impl_type = Some(value.parse()?);
                 } else if meta.path.is_ident("backtrace") {
                     backtrace = true;
+                } else if meta.path.is_ident("macro") {
+                    meta.parse_nested_meta(|meta| {
+                        if meta.path.is_ident("mangle") {
+                            macro_mangle = true;
+                        }
+                        Ok(())
+                    })?;
                 }
 
                 Ok(())
@@ -155,6 +164,7 @@ fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
     Ok(DeriveMeta {
         impl_type,
         backtrace,
+        macro_mangle,
     })
 }
 
@@ -170,6 +180,7 @@ pub fn derive_box(input: &DeriveInput) -> Result<TokenStream> {
     let DeriveMeta {
         impl_type,
         backtrace,
+        ..
     } = resolve_meta(input)?;
 
     if impl_type == input_type {
@@ -229,10 +240,7 @@ pub fn derive_ctor(input: &DeriveInput, t: DeriveCtorType) -> Result<TokenStream
     let input_type = input.ident.clone();
     let vis = &input.vis;
 
-    let DeriveMeta {
-        impl_type,
-        backtrace: _,
-    } = resolve_meta(input)?;
+    let DeriveMeta { impl_type, .. } = resolve_meta(input)?;
 
     let input = Input::from_syn(input)?;
 
@@ -363,7 +371,8 @@ pub fn derive_macro_inner(input: &DeriveInput, bail: bool) -> Result<TokenStream
 
     let DeriveMeta {
         impl_type,
-        backtrace: _,
+        macro_mangle,
+        ..
     } = resolve_meta(input)?;
 
     let input = Input::from_syn(input)?;
@@ -412,13 +421,17 @@ pub fn derive_macro_inner(input: &DeriveInput, bail: bool) -> Result<TokenStream
             big_camel_case_to_snake_case(&variant_name.to_string()),
             span = ctor_span,
         );
-        let mangled_name = format_ident!(
-            "__thiserror_ext_macro__{}__{}{}",
-            big_camel_case_to_snake_case(&input_type.to_string()),
-            big_camel_case_to_snake_case(&variant_name.to_string()),
-            bail_suffix,
-            span = ctor_span,
-        );
+        let mangled_name = if macro_mangle {
+            format_ident!(
+                "__thiserror_ext_macro__{}__{}{}",
+                big_camel_case_to_snake_case(&input_type.to_string()),
+                big_camel_case_to_snake_case(&variant_name.to_string()),
+                bail_suffix,
+                span = ctor_span,
+            )
+        } else {
+            export_name.clone()
+        };
 
         let bail_doc = if bail { " and bails out" } else { "" };
         let doc = match &variant {
@@ -484,6 +497,7 @@ pub fn derive_macro_inner(input: &DeriveInput, bail: bool) -> Result<TokenStream
 
         let item = quote!(
             #[doc = #doc]
+            #[allow(unused_macros)]
             #macro_export
             macro_rules! #mangled_name {
                 #full
