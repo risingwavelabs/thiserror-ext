@@ -14,6 +14,10 @@ impl Struct<'_> {
         backtrace_field(&self.fields)
     }
 
+    pub(crate) fn message_field(&self) -> Option<&Field> {
+        message_field(&self.fields)
+    }
+
     pub(crate) fn distinct_backtrace_field(&self) -> Option<&Field> {
         let backtrace_field = self.backtrace_field()?;
         distinct_backtrace_field(backtrace_field, self.from_field())

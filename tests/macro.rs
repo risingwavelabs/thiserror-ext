@@ -31,10 +31,18 @@ pub mod inner {
         #[error("quux {message}")]
         Quux { message: String },
     }
+    #[derive(Error, Debug, Macro)]
+    #[error("not implemented: {message}, issue: {issue:?}")]
+    pub(super) struct NotImplemented {
+        pub issue: Option<i32>,
+        pub message: String,
+    }
 }
 
 mod tests {
-    use crate::inner::{BoxMyError, MyError};
+    use crate::inner::{
+        bail_not_implemented, not_implemented, BoxMyError, MyError, NotImplemented,
+    };
 
     #[test]
     fn test() {
@@ -79,12 +87,48 @@ mod tests {
     }
 
     #[test]
-    fn test_bail() -> Result<(), anyhow::Error> {
+    fn test_bail() {
         use crate::inner::bail_quux;
 
-        match 1 + 1 {
-            2 => Ok(()),
-            _ => bail_quux!("1 + 1 != 2"),
+        fn test() -> Result<(), anyhow::Error> {
+            match 1 + 1 {
+                3 => Ok(()),
+                _ => bail_quux!("1 + 1 != 3"),
+            }
         }
+
+        let error = test().unwrap_err();
+        assert!(matches!(
+            error.downcast_ref::<BoxMyError>().unwrap().inner(),
+            MyError::Quux { message } if message == "1 + 1 != 3"
+        ));
+    }
+
+    #[test]
+    fn test_struct() {
+        let a: NotImplemented = not_implemented!(issue = 42, "hello {}", 42);
+        assert!(matches!(
+            a,
+            NotImplemented {
+                issue: Some(42),
+                message,
+            } if message == "hello 42"
+        ));
+
+        fn test() -> Result<(), anyhow::Error> {
+            match 1 + 1 {
+                3 => Ok(()),
+                _ => bail_not_implemented!(issue = 42, "1 + 1 != 3"),
+            }
+        }
+
+        let error = test().unwrap_err();
+        assert!(matches!(
+            error.downcast_ref::<NotImplemented>().unwrap(),
+            NotImplemented {
+                issue: Some(42),
+                message,
+            } if message == "1 + 1 != 3"
+        ));
     }
 }
