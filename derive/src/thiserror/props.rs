@@ -60,6 +60,10 @@ impl Variant<'_> {
         backtrace_field(&self.fields)
     }
 
+    pub(crate) fn message_field(&self) -> Option<&Field> {
+        message_field(&self.fields)
+    }
+
     pub(crate) fn distinct_backtrace_field(&self) -> Option<&Field> {
         let backtrace_field = self.backtrace_field()?;
         distinct_backtrace_field(backtrace_field, self.from_field())
@@ -80,6 +84,20 @@ impl Field<'_> {
         } else if self.attrs.source.is_some() {
             true
         } else if matches!(&self.member, Member::Named(ident) if ident == "source") {
+            true
+        } else {
+            false
+        }
+    }
+
+    /// WHether this field is the `message` field.
+    pub(crate) fn is_message(&self) -> bool {
+        if self.attrs.message.is_some() {
+            true
+        } else if matches!(
+            &self.member,
+            Member::Named(ident) if ident == "message"
+        ) {
             true
         } else {
             false
@@ -137,6 +155,15 @@ fn distinct_backtrace_field<'a, 'b>(
     } else {
         Some(backtrace_field)
     }
+}
+
+fn message_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {
+    for field in fields {
+        if field.is_message() {
+            return Some(field);
+        }
+    }
+    None
 }
 
 fn type_is_backtrace(ty: &Type) -> bool {
