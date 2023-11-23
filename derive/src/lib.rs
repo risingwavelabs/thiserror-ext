@@ -31,3 +31,12 @@ pub fn derive_box(input: TokenStream) -> TokenStream {
         .unwrap_or_else(|err| err.to_compile_error())
         .into()
 }
+
+#[proc_macro_derive(Macro, attributes(thiserror_ext, message))]
+pub fn derive_macro(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+
+    expand::derive_macro(&input)
+        .unwrap_or_else(|err| err.to_compile_error())
+        .into()
+}

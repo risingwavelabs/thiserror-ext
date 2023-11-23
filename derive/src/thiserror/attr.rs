@@ -12,6 +12,7 @@ pub struct Attrs<'a> {
     pub source: Option<&'a Attribute>,
     pub backtrace: Option<&'a Attribute>,
     pub from: Option<&'a Attribute>,
+    pub message: Option<&'a Attribute>,
     pub transparent: Option<Transparent<'a>>,
 }
 
@@ -49,6 +50,7 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
         source: None,
         backtrace: None,
         from: None,
+        message: None,
         transparent: None,
     };
 
@@ -79,6 +81,12 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
                 return Err(Error::new_spanned(attr, "duplicate #[from] attribute"));
             }
             attrs.from = Some(attr);
+        } else if attr.path().is_ident("message") {
+            attr.meta.require_path_only()?;
+            if attrs.message.is_some() {
+                return Err(Error::new_spanned(attr, "duplicate #[message] attribute"));
+            }
+            attrs.message = Some(attr);
         }
     }
 

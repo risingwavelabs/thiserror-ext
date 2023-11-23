@@ -17,7 +17,7 @@ enum SourceInto {
     No,
 }
 
-fn resolve_variant_args(variant: &Variant<'_>, source_into: SourceInto) -> Args {
+fn resolve_variant_args(variant: &Variant<'_>, source_into: SourceInto, for_macro: bool) -> Args {
     let mut other_args = Vec::new();
     let mut source_arg = None;
     let mut ctor_args = Vec::new();
@@ -60,14 +60,67 @@ fn resolve_variant_args(variant: &Variant<'_>, source_into: SourceInto) -> Args 
                 }
             }
         } else {
-            other_args.push(quote!(#name: impl Into<#ty>,));
-            ctor_args.push(quote!(#member: #name.into(),));
+            #[allow(clippy::collapsible_else_if)]
+            if for_macro {
+                other_args.push(quote!(#name = $#name:expr,));
+                ctor_args.push(quote!(#member: $#name.into(),));
+            } else {
+                other_args.push(quote!(#name: impl Into<#ty>,));
+                ctor_args.push(quote!(#member: #name.into(),));
+            }
         }
     }
 
     Args {
         other_args,
         source_arg,
+        ctor_args,
+    }
+}
+
+struct MacroArgs {
+    other_args: Vec<TokenStream>,
+    other_call_args: Vec<TokenStream>,
+    ctor_args: Vec<TokenStream>,
+}
+
+fn resolve_variant_args_for_macro(variant: &Variant<'_>) -> MacroArgs {
+    let mut other_args = Vec::new();
+    let mut other_call_args = Vec::new();
+    let mut ctor_args = Vec::new();
+
+    for (i, field) in variant.fields.iter().enumerate() {
+        let ty = &field.ty;
+        let member = &field.member;
+
+        let name = match &field.member {
+            Member::Named(named) => named.clone(),
+            Member::Unnamed(_) => format_ident!("arg_{}", i),
+        };
+
+        if field.is_backtrace() {
+            let expr = if type_is_option(ty) {
+                quote!(std::option::Option::Some(
+                    std::backtrace::Backtrace::capture()
+                ))
+            } else {
+                quote!(std::convert::From::from(
+                    std::backtrace::Backtrace::capture()
+                ))
+            };
+            ctor_args.push(quote!(#member: #expr,))
+        } else if field.is_message() {
+            ctor_args.push(quote!(#member: ::std::format!($($fmt_arg)*).into(),));
+        } else {
+            other_args.push(quote!(#name = $#name:expr,));
+            other_call_args.push(quote!(#name));
+            ctor_args.push(quote!(#member: $#name.into(),));
+        }
+    }
+
+    MacroArgs {
+        other_args,
+        other_call_args,
         ctor_args,
     }
 }
@@ -211,6 +264,7 @@ pub fn derive_ctor(input: &DeriveInput, t: DeriveCtorType) -> Result<TokenStream
                 DeriveCtorType::Construct => SourceInto::Yes,
                 DeriveCtorType::ContextInto => SourceInto::No,
             },
+            false,
         );
 
         let ctor_expr = quote!(#input_type::#variant_name {
@@ -297,6 +351,121 @@ pub fn derive_ctor(input: &DeriveInput, t: DeriveCtorType) -> Result<TokenStream
             quote!(#(#items)*)
         }
     };
+
+    Ok(generated)
+}
+
+pub fn derive_macro(input: &DeriveInput) -> Result<TokenStream> {
+    let input_type = input.ident.clone();
+    let vis = &input.vis;
+
+    let DeriveMeta {
+        impl_type,
+        backtrace: _,
+    } = resolve_meta(input)?;
+
+    let input = Input::from_syn(input)?;
+
+    let input = match input {
+        Input::Struct(input) => {
+            return Err(syn::Error::new_spanned(
+                input.original,
+                "only `enum` is supported for `thiserror_ext`",
+            ))
+        }
+        Input::Enum(input) => input,
+    };
+
+    let mut items = Vec::new();
+
+    for variant in input.variants {
+        // We only care about variants with `message` field and no `source` or `from` field.
+        if variant.message_field().is_none() || variant.source_field().is_some() {
+            continue;
+        }
+
+        let variant_name = &variant.ident;
+
+        let MacroArgs {
+            other_args,
+            other_call_args,
+            ctor_args,
+        } = resolve_variant_args_for_macro(&variant);
+
+        let ctor_expr = quote!(#input_type::#variant_name {
+            #(#ctor_args)*
+        });
+
+        let ctor_name = format_ident!(
+            "{}",
+            big_camel_case_to_snake_case(&variant_name.to_string()),
+            span = variant.original.span()
+        );
+        let doc = format!("Constructs a [`{input_type}::{variant_name}`] variant.");
+
+        let mut arms = Vec::new();
+
+        let len = other_args.len();
+
+        let message_arg = quote!($($fmt_arg:tt)*);
+        let message_call_arg = quote!($($fmt_arg)*);
+
+        for bitset in (0..((1 << len) - 1)).rev() {
+            let mut args = Vec::new();
+            let mut call_args = Vec::new();
+            for (i, (arg, call_arg)) in (other_args.iter()).zip(other_call_args.iter()).enumerate()
+            {
+                if bitset & (1 << i) != 0 {
+                    args.push(arg);
+                    call_args.push(quote!(#call_arg = $#call_arg,));
+                } else {
+                    call_args.push(quote!(#call_arg = ::std::option::Option::None,));
+                }
+            }
+
+            let arm = quote!(
+                (#(#args)* #message_arg) => {
+                    #ctor_name!(#(#call_args)* #message_call_arg)
+                };
+            );
+            arms.push(arm);
+        }
+
+        let full = quote!(
+            (#(#other_args)* #message_arg) => {{
+                let res: #impl_type = (#ctor_expr).into();
+                res
+            }};
+        );
+
+        let item = quote!(
+            #[doc = #doc]
+            #[allow(unused_macros)]
+            macro_rules! #ctor_name {
+                #full
+                #(#arms)*
+            }
+        );
+
+        let mod_name = format_ident!(
+            "__thiserror_ext_macros_{}_{}",
+            big_camel_case_to_snake_case(&input_type.to_string()),
+            ctor_name
+        );
+
+        let mod_item = quote!(
+            mod #mod_name {
+                #item
+            }
+            #vis use #mod_name::#ctor_name;
+        );
+
+        items.push(mod_item);
+    }
+
+    let generated = quote!(
+        #( #items )*
+    );
 
     Ok(generated)
 }
