@@ -2,6 +2,7 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use syn::{
     spanned::Spanned, DeriveInput, GenericArgument, Ident, Member, PathArguments, Result, Type,
+    Visibility,
 };
 
 use crate::thiserror::ast::{Input, Variant};
@@ -438,29 +439,30 @@ pub fn derive_macro(input: &DeriveInput) -> Result<TokenStream> {
             }};
         );
 
+        let macro_export = if let Visibility::Public(_) = &vis {
+            quote!(#[macro_export])
+        } else {
+            quote!()
+        };
+
+        let mangled_name = format_ident!(
+            "__thiserror_ext_macro_{}__{}",
+            big_camel_case_to_snake_case(&input_type.to_string()),
+            ctor_name,
+        );
+
         let item = quote!(
             #[doc = #doc]
             #[allow(unused_macros)]
-            macro_rules! #ctor_name {
+            #macro_export
+            macro_rules! #mangled_name {
                 #full
                 #(#arms)*
             }
+            #vis use #mangled_name as #ctor_name;
         );
 
-        let mod_name = format_ident!(
-            "__thiserror_ext_macros_{}_{}",
-            big_camel_case_to_snake_case(&input_type.to_string()),
-            ctor_name
-        );
-
-        let mod_item = quote!(
-            mod #mod_name {
-                #item
-            }
-            #vis use #mod_name::#ctor_name;
-        );
-
-        items.push(mod_item);
+        items.push(item);
     }
 
     let generated = quote!(
