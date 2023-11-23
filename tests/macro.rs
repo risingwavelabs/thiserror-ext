@@ -6,7 +6,7 @@ pub mod inner {
 
     #[derive(Error, Debug, Macro, Box)]
     #[thiserror_ext(type = BoxMyError)]
-    pub enum MyError {
+    pub(super) enum MyError {
         #[error("foo {message}")]
         Foo { message: String },
 
@@ -27,15 +27,19 @@ pub mod inner {
             #[message]
             msg: Box<str>,
         },
+
+        #[error("quux {message}")]
+        Quux { message: String },
     }
 }
 
 mod tests {
-    use crate::inner::{bar, baz, foo, qux};
     use crate::inner::{BoxMyError, MyError};
 
     #[test]
     fn test() {
+        use crate::inner::{bar, baz, foo, qux};
+
         let _: BoxMyError = foo!("hello {}", 42);
 
         let _ = bar!("hello {}", 42);
@@ -72,5 +76,15 @@ mod tests {
                 ..
             } if extra == "" && msg.as_ref() == "hello 42"
         ));
+    }
+
+    #[test]
+    fn test_bail() -> Result<(), anyhow::Error> {
+        use crate::inner::bail_quux;
+
+        match 1 + 1 {
+            2 => Ok(()),
+            _ => bail_quux!("1 + 1 != 2"),
+        }
     }
 }

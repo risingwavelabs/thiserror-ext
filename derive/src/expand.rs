@@ -239,7 +239,7 @@ pub fn derive_ctor(input: &DeriveInput, t: DeriveCtorType) -> Result<TokenStream
         Input::Struct(input) => {
             return Err(syn::Error::new_spanned(
                 input.original,
-                "only `enum` is supported for `thiserror_ext`",
+                "only `enum` is supported for `Construct` and `ContextInto`",
             ))
         }
         Input::Enum(input) => input,
@@ -356,7 +356,7 @@ pub fn derive_ctor(input: &DeriveInput, t: DeriveCtorType) -> Result<TokenStream
     Ok(generated)
 }
 
-pub fn derive_macro(input: &DeriveInput) -> Result<TokenStream> {
+pub fn derive_macro_inner(input: &DeriveInput, bail: bool) -> Result<TokenStream> {
     let input_type = input.ident.clone();
     let vis = &input.vis;
 
@@ -397,11 +397,22 @@ pub fn derive_macro(input: &DeriveInput) -> Result<TokenStream> {
             #(#ctor_args)*
         });
 
-        let ctor_name = format_ident!(
-            "{}",
+        let bail_prefix = if bail { "bail_" } else { "" };
+        let bail_suffix = if bail { "__bail" } else { "" };
+
+        let export_name = format_ident!(
+            "{}{}",
+            bail_prefix,
             big_camel_case_to_snake_case(&variant_name.to_string()),
             span = variant.original.span()
         );
+        let mangled_name = format_ident!(
+            "__thiserror_ext_macro_{}__{}{}",
+            big_camel_case_to_snake_case(&input_type.to_string()),
+            big_camel_case_to_snake_case(&variant_name.to_string()),
+            bail_suffix,
+        );
+
         let doc = format!("Constructs a [`{input_type}::{variant_name}`] variant.");
 
         let mut arms = Vec::new();
@@ -426,17 +437,28 @@ pub fn derive_macro(input: &DeriveInput) -> Result<TokenStream> {
 
             let arm = quote!(
                 (#(#args)* #message_arg) => {
-                    #ctor_name!(@ #(#call_args)* #message_call_arg)
+                    #export_name!(@ #(#call_args)* #message_call_arg)
                 };
             );
             arms.push(arm);
         }
 
-        let full = quote!(
-            (@ #(#other_args)* #message_arg) => {{
+        let full_inner = if bail {
+            quote!({
+                let res: #impl_type = (#ctor_expr).into();
+                return Err(res.into());
+            })
+        } else {
+            quote!({
                 let res: #impl_type = (#ctor_expr).into();
                 res
-            }};
+            })
+        };
+
+        let full = quote!(
+            (@ #(#other_args)* #message_arg) => {
+                #full_inner
+            };
         );
 
         let macro_export = if let Visibility::Public(_) = &vis {
@@ -445,21 +467,15 @@ pub fn derive_macro(input: &DeriveInput) -> Result<TokenStream> {
             quote!()
         };
 
-        let mangled_name = format_ident!(
-            "__thiserror_ext_macro_{}__{}",
-            big_camel_case_to_snake_case(&input_type.to_string()),
-            ctor_name,
-        );
-
         let item = quote!(
             #[doc = #doc]
-            #[allow(unused_macros)]
             #macro_export
             macro_rules! #mangled_name {
                 #full
                 #(#arms)*
             }
-            #vis use #mangled_name as #ctor_name;
+
+            #vis use #mangled_name as #export_name;
         );
 
         items.push(item);
@@ -467,6 +483,18 @@ pub fn derive_macro(input: &DeriveInput) -> Result<TokenStream> {
 
     let generated = quote!(
         #( #items )*
+    );
+
+    Ok(generated)
+}
+
+pub fn derive_macro(input: &DeriveInput) -> Result<TokenStream> {
+    let ctor = derive_macro_inner(input, false)?;
+    let bail = derive_macro_inner(input, true)?;
+
+    let generated = quote!(
+        #ctor
+        #bail
     );
 
     Ok(generated)
