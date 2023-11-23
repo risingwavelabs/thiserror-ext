@@ -33,16 +33,15 @@ pub mod inner {
     }
     #[derive(Error, Debug, Macro)]
     #[error("not implemented: {message}, issue: {issue:?}")]
-    pub(super) struct NotImplemented {
+    #[thiserror_ext(macro(mangle))]
+    pub struct NotImplemented {
         pub issue: Option<i32>,
         pub message: String,
     }
 }
 
 mod tests {
-    use crate::inner::{
-        bail_not_implemented, not_implemented, BoxMyError, MyError, NotImplemented,
-    };
+    use crate::inner::{BoxMyError, MyError, NotImplemented};
 
     #[test]
     fn test() {
@@ -106,6 +105,14 @@ mod tests {
 
     #[test]
     fn test_struct() {
+        use crate::inner::bail_not_implemented;
+        use crate::inner::not_implemented;
+
+        // As we're mangling the macro name, we can't use the macro directly.
+        //
+        // use crate::__thiserror_ext_macro__not_implemented__not_implemented;
+        // use crate::not_implemented;
+
         let a: NotImplemented = not_implemented!(issue = 42, "hello {}", 42);
         assert!(matches!(
             a,
