@@ -2,8 +2,8 @@ use either::{for_both, Either};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use syn::{
-    spanned::Spanned, DeriveInput, GenericArgument, Ident, Member, PathArguments, Result, Type,
-    Visibility,
+    spanned::Spanned, DeriveInput, GenericArgument, Ident, LitStr, Member, PathArguments, Result,
+    Type, Visibility,
 };
 
 use crate::thiserror::ast::{Field, Input, Variant};
@@ -131,12 +131,14 @@ struct DeriveMeta {
     impl_type: Ident,
     backtrace: bool,
     macro_mangle: bool,
+    macro_path: Option<TokenStream>,
 }
 
 fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
     let mut impl_type = None;
     let mut backtrace = false;
     let mut macro_mangle = false;
+    let mut macro_path = None;
 
     for attr in &input.attrs {
         if attr.path().is_ident("thiserror_ext") {
@@ -150,6 +152,23 @@ fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
                     meta.parse_nested_meta(|meta| {
                         if meta.path.is_ident("mangle") {
                             macro_mangle = true;
+                        } else if meta.path.is_ident("path") {
+                            let value = meta.value()?;
+                            let path: LitStr = value.parse()?;
+                            let mut path = path.value();
+
+                            if path.starts_with("crate") {
+                                path.insert(0, '$');
+                                if !path.ends_with("::") {
+                                    path.push_str("::");
+                                }
+                                macro_path = Some(path.parse()?);
+                            } else {
+                                return Err(syn::Error::new_spanned(
+                                    meta.path,
+                                    "macro path should start with `crate`",
+                                ));
+                            }
                         }
                         Ok(())
                     })?;
@@ -165,6 +184,7 @@ fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
         impl_type,
         backtrace,
         macro_mangle,
+        macro_path,
     })
 }
 
@@ -372,6 +392,7 @@ pub fn derive_macro_inner(input: &DeriveInput, bail: bool) -> Result<TokenStream
     let DeriveMeta {
         impl_type,
         macro_mangle,
+        macro_path,
         ..
     } = resolve_meta(input)?;
 
@@ -394,8 +415,8 @@ pub fn derive_macro_inner(input: &DeriveInput, bail: bool) -> Result<TokenStream
 
         let variant_name = for_both!(&variant, v => &v.ident);
         let ctor_path = match &variant {
-            Either::Left(_s) => quote!(#input_type),
-            Either::Right(_v) => quote!(#input_type::#variant_name),
+            Either::Left(_s) => quote!(#macro_path #input_type),
+            Either::Right(_v) => quote!(#macro_path #input_type::#variant_name),
         };
 
         let fields = for_both!(&variant, v => &v.fields);
@@ -473,12 +494,12 @@ pub fn derive_macro_inner(input: &DeriveInput, bail: bool) -> Result<TokenStream
 
         let full_inner = if bail {
             quote!({
-                let res: #impl_type = (#ctor_expr).into();
-                return Err(res.into());
+                let res: #macro_path #impl_type = (#ctor_expr).into();
+                return ::std::result::Result::Err(res.into());
             })
         } else {
             quote!({
-                let res: #impl_type = (#ctor_expr).into();
+                let res: #macro_path #impl_type = (#ctor_expr).into();
                 res
             })
         };
