@@ -14,6 +14,12 @@ pub enum MyErrorInner {
         from: String,
     },
 
+    #[error("cannot parse int from `{from}`")]
+    ParseImplicitSource {
+        source: std::num::ParseIntError,
+        from: String,
+    },
+
     #[error("cannot parse int")]
     ParseUnnamed(#[source] std::num::ParseFloatError, String),
 

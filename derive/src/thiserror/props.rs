@@ -70,6 +70,21 @@ impl Field<'_> {
     pub(crate) fn is_backtrace(&self) -> bool {
         type_is_backtrace(self.ty)
     }
+
+    /// Whether this field is the `source` field but not the `from` field.
+    ///
+    /// See [`Variant::source_field`].
+    pub(crate) fn is_non_from_source(&self) -> bool {
+        if self.attrs.from.is_some() {
+            false
+        } else if self.attrs.source.is_some() {
+            true
+        } else if matches!(&self.member, Member::Named(ident) if ident == "source") {
+            true
+        } else {
+            false
+        }
+    }
 }
 
 fn from_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {

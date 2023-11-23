@@ -27,7 +27,7 @@ fn resolve(variant: &Variant<'_>, source_into: SourceInto) -> Args {
         let name = match &field.member {
             Member::Named(named) => named.clone(),
             Member::Unnamed(_) => {
-                if field.attrs.source.is_some() {
+                if field.is_non_from_source() {
                     format_ident!("source")
                 } else {
                     format_ident!("arg_{}", i)
@@ -46,7 +46,7 @@ fn resolve(variant: &Variant<'_>, source_into: SourceInto) -> Args {
                 ))
             };
             ctor_args.push(quote!(#member: #expr,))
-        } else if field.attrs.source.is_some() {
+        } else if field.is_non_from_source() {
             match source_into {
                 SourceInto::Yes => {
                     source_arg = Some(quote!(#name: impl Into<#ty>,));
