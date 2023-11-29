@@ -10,12 +10,12 @@ pub trait WithBacktrace {
 }
 
 /// Do not capture extra backtrace.
-pub struct NoBacktrace;
+pub struct NoExtraBacktrace;
 
 /// Capture backtrace if the error does not already have one.
 pub struct MaybeBacktrace(Option<Backtrace>);
 
-impl WithBacktrace for NoBacktrace {
+impl WithBacktrace for NoExtraBacktrace {
     fn capture(_inner: &dyn std::error::Error) -> Self {
         Self
     }

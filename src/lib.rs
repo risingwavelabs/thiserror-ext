@@ -2,7 +2,7 @@
 
 mod as_dyn;
 mod backtrace;
-mod error_box;
+mod ptr;
 mod report;
 
 pub use as_dyn::AsDyn;
@@ -11,8 +11,8 @@ pub use thiserror_ext_derive::*;
 
 #[doc(hidden)]
 pub mod __private {
-    pub use crate::backtrace::{MaybeBacktrace, NoBacktrace};
-    pub use crate::error_box::ErrorBox;
+    pub use crate::backtrace::{MaybeBacktrace, NoExtraBacktrace};
+    pub use crate::ptr::{ErrorArc, ErrorBox};
     pub use thiserror;
 }
 

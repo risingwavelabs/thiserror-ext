@@ -193,7 +193,28 @@ pub enum DeriveCtorType {
     ContextInto,
 }
 
-pub fn derive_box(input: &DeriveInput) -> Result<TokenStream> {
+pub enum DeriveNewType {
+    Box,
+    Arc,
+}
+
+impl DeriveNewType {
+    fn name(&self) -> &'static str {
+        match self {
+            DeriveNewType::Box => "Box",
+            DeriveNewType::Arc => "Arc",
+        }
+    }
+
+    fn ty_ident(&self) -> Ident {
+        match self {
+            DeriveNewType::Box => format_ident!("ErrorBox"),
+            DeriveNewType::Arc => format_ident!("ErrorArc"),
+        }
+    }
+}
+
+pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenStream> {
     let input_type = input.ident.clone();
     let vis = &input.vis;
 
@@ -206,25 +227,41 @@ pub fn derive_box(input: &DeriveInput) -> Result<TokenStream> {
     if impl_type == input_type {
         return Err(syn::Error::new_spanned(
             input,
-            "should specify a different type for `Box` derive with `#[thiserror_ext(type = <type>)]`",
+            format!("should specify a different type for `{}` derive with `#[thiserror_ext(type = <type>)]`", ty.name()),
         ));
     }
 
     let backtrace_type_param = if backtrace {
         quote!(thiserror_ext::__private::MaybeBacktrace)
     } else {
-        quote!(thiserror_ext::__private::NoBacktrace)
+        quote!(thiserror_ext::__private::NoExtraBacktrace)
     };
 
-    let doc = format!("The boxed type of [`{}`].", input_type);
+    let doc = format!("The `{}`-wrapped type of [`{}`].", ty.name(), input_type);
+    let new_type = ty.ty_ident();
+    let extra_derive = match ty {
+        DeriveNewType::Box => quote!(),
+        DeriveNewType::Arc => quote!(Clone),
+    };
+
+    let into_inner = match ty {
+        DeriveNewType::Box => quote!(
+            #[doc = "Consumes `self` and returns the inner error."]
+            #vis fn into_inner(self) -> #input_type {
+                self.0.into_inner()
+            }
+        ),
+        DeriveNewType::Arc => quote!(),
+    };
+
     let generated = quote!(
         #[doc = #doc]
-        #[derive(thiserror_ext::__private::thiserror::Error, Debug)]
+        #[derive(thiserror_ext::__private::thiserror::Error, Debug, #extra_derive)]
         #[error(transparent)]
         #vis struct #impl_type(
             #[from]
             #[backtrace]
-            thiserror_ext::__private::ErrorBox<
+            thiserror_ext::__private::#new_type<
                 #input_type,
                 #backtrace_type_param,
             >,
@@ -236,7 +273,7 @@ pub fn derive_box(input: &DeriveInput) -> Result<TokenStream> {
             E: Into<#input_type>,
         {
             fn from(error: E) -> Self {
-                Self(thiserror_ext::__private::ErrorBox::new(error.into()))
+                Self(thiserror_ext::__private::#new_type::new(error.into()))
             }
         }
 
@@ -246,10 +283,7 @@ pub fn derive_box(input: &DeriveInput) -> Result<TokenStream> {
                 self.0.inner()
             }
 
-            #[doc = "Consumes `self` and returns the inner error."]
-            #vis fn into_inner(self) -> #input_type {
-                self.0.into_inner()
-            }
+            #into_inner
         }
     );
 

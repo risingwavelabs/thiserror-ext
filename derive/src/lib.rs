@@ -1,4 +1,4 @@
-use expand::DeriveCtorType;
+use expand::{DeriveCtorType, DeriveNewType};
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, DeriveInput};
 
@@ -27,7 +27,16 @@ pub fn derive_context_into(input: TokenStream) -> TokenStream {
 pub fn derive_box(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
-    expand::derive_box(&input)
+    expand::derive_new_type(&input, DeriveNewType::Box)
+        .unwrap_or_else(|err| err.to_compile_error())
+        .into()
+}
+
+#[proc_macro_derive(Arc, attributes(thiserror_ext))]
+pub fn derive_arc(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+
+    expand::derive_new_type(&input, DeriveNewType::Arc)
         .unwrap_or_else(|err| err.to_compile_error())
         .into()
 }
