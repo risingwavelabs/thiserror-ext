@@ -316,6 +316,14 @@ pub fn derive_ctor(input: &DeriveInput, t: DeriveCtorType) -> Result<TokenStream
             continue;
         }
 
+        let skipped = match t {
+            DeriveCtorType::Construct => variant.attrs.construct_skip.is_some(),
+            DeriveCtorType::ContextInto => variant.attrs.context_into_skip.is_some(),
+        };
+        if skipped {
+            continue;
+        }
+
         let variant_name = &variant.ident;
 
         let Args {

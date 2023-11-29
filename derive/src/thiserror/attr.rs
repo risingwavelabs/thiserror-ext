@@ -14,6 +14,8 @@ pub struct Attrs<'a> {
     pub from: Option<&'a Attribute>,
     pub message: Option<&'a Attribute>,
     pub transparent: Option<Transparent<'a>>,
+    pub construct_skip: Option<&'a Attribute>,
+    pub context_into_skip: Option<&'a Attribute>,
 }
 
 #[derive(Clone)]
@@ -52,6 +54,8 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
         from: None,
         message: None,
         transparent: None,
+        construct_skip: None,
+        context_into_skip: None,
     };
 
     for attr in input {
@@ -87,6 +91,24 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
                 return Err(Error::new_spanned(attr, "duplicate #[message] attribute"));
             }
             attrs.message = Some(attr);
+        } else if attr.path().is_ident("construct") {
+            attr.parse_nested_meta(|meta| {
+                if meta.path.is_ident("skip") {
+                    attrs.construct_skip = Some(attr);
+                    Ok(())
+                } else {
+                    Err(Error::new_spanned(attr, "expected `skip`"))
+                }
+            })?;
+        } else if attr.path().is_ident("context_into") {
+            attr.parse_nested_meta(|meta| {
+                if meta.path.is_ident("skip") {
+                    attrs.context_into_skip = Some(attr);
+                    Ok(())
+                } else {
+                    Err(Error::new_spanned(attr, "expected `skip`"))
+                }
+            })?;
         }
     }
 

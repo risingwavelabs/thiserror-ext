@@ -43,6 +43,16 @@ pub enum MyErrorInner {
 
     #[error("unsupported: {0}")]
     UnsupportedSingleField(String),
+
+    #[error("bad id: {0}")]
+    #[construct(skip)]
+    BadId(String),
+}
+
+impl MyError {
+    pub fn bad_id(id: impl ToString) -> Self {
+        MyErrorInner::BadId(id.to_string()).into()
+    }
 }
 
 #[test]
