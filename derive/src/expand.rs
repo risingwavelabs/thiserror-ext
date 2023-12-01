@@ -19,7 +19,7 @@ enum SourceInto {
     No,
 }
 
-fn resolve_variant_args(variant: &Variant<'_>, source_into: SourceInto, for_macro: bool) -> Args {
+fn resolve_variant_args(variant: &Variant<'_>, source_into: SourceInto) -> Args {
     let mut other_args = Vec::new();
     let mut source_arg = None;
     let mut ctor_args = Vec::new();
@@ -62,14 +62,8 @@ fn resolve_variant_args(variant: &Variant<'_>, source_into: SourceInto, for_macr
                 }
             }
         } else {
-            #[allow(clippy::collapsible_else_if)]
-            if for_macro {
-                other_args.push(quote!(#name = $#name:expr,));
-                ctor_args.push(quote!(#member: $#name.into(),));
-            } else {
-                other_args.push(quote!(#name: impl Into<#ty>,));
-                ctor_args.push(quote!(#member: #name.into(),));
-            }
+            other_args.push(quote!(#name: impl Into<#ty>,));
+            ctor_args.push(quote!(#member: #name.into(),));
         }
     }
 
@@ -336,7 +330,6 @@ pub fn derive_ctor(input: &DeriveInput, t: DeriveCtorType) -> Result<TokenStream
                 DeriveCtorType::Construct => SourceInto::Yes,
                 DeriveCtorType::ContextInto => SourceInto::No,
             },
-            false,
         );
 
         let ctor_expr = quote!(#input_type::#variant_name {
