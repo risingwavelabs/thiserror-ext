@@ -16,7 +16,7 @@ struct ParseFloatErrorWithBacktrace {
 }
 
 #[derive(Error, Debug, Box)]
-#[thiserror_ext(type = MyError, backtrace)]
+#[thiserror_ext(newtype(name = MyError, backtrace))]
 enum MyErrorInner {
     #[error("parse int")]
     ParseInt {

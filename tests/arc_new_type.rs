@@ -6,7 +6,7 @@ use thiserror::*;
 use thiserror_ext::*;
 
 #[derive(Error, Debug, Arc, Construct)]
-#[thiserror_ext(type = SharedMyError)]
+#[thiserror_ext(newtype(name = SharedMyError))]
 pub enum MyErrorInner {
     #[error("foo: {foo}")]
     Foo { source: ParseIntError, foo: String },

@@ -5,7 +5,7 @@ pub mod inner {
     use thiserror_ext_derive::{Box, Macro};
 
     #[derive(Error, Debug, Macro, Box)]
-    #[thiserror_ext(type = BoxMyError)]
+    #[thiserror_ext(newtype(name = BoxMyError))]
     pub(super) enum MyError {
         #[error("foo {message}")]
         Foo { message: String },

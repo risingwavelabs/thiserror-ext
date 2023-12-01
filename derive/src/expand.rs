@@ -2,8 +2,8 @@ use either::{for_both, Either};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use syn::{
-    spanned::Spanned, DeriveInput, GenericArgument, Ident, LitStr, Member, PathArguments, Result,
-    Type, Visibility,
+    spanned::Spanned, DeriveInput, Error, GenericArgument, Ident, LitStr, Member, PathArguments,
+    Result, Type, Visibility,
 };
 
 use crate::thiserror::ast::{Field, Input, Variant};
@@ -137,11 +137,18 @@ fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
     for attr in &input.attrs {
         if attr.path().is_ident("thiserror_ext") {
             attr.parse_nested_meta(|meta| {
-                if meta.path.is_ident("type") {
-                    let value = meta.value()?;
-                    impl_type = Some(value.parse()?);
-                } else if meta.path.is_ident("backtrace") {
-                    backtrace = true;
+                if meta.path.is_ident("newtype") {
+                    meta.parse_nested_meta(|meta| {
+                        if meta.path.is_ident("name") {
+                            let value = meta.value()?;
+                            impl_type = Some(value.parse()?);
+                        } else if meta.path.is_ident("backtrace") {
+                            backtrace = true;
+                        } else {
+                            return Err(Error::new_spanned(meta.path, "unknown attribute"));
+                        };
+                        Ok(())
+                    })?;
                 } else if meta.path.is_ident("macro") {
                     meta.parse_nested_meta(|meta| {
                         if meta.path.is_ident("mangle") {
@@ -158,14 +165,18 @@ fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
                                 }
                                 macro_path = Some(path.parse()?);
                             } else {
-                                return Err(syn::Error::new_spanned(
+                                return Err(Error::new_spanned(
                                     meta.path,
                                     "macro path should start with `crate`",
                                 ));
                             }
+                        } else {
+                            return Err(Error::new_spanned(meta.path, "unknown attribute"));
                         }
                         Ok(())
                     })?;
+                } else {
+                    return Err(Error::new_spanned(meta.path, "unknown attribute"));
                 }
 
                 Ok(())
@@ -219,9 +230,9 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
     } = resolve_meta(input)?;
 
     if impl_type == input_type {
-        return Err(syn::Error::new_spanned(
+        return Err(Error::new_spanned(
             input,
-            format!("should specify a different type for `{}` derive with `#[thiserror_ext(type = <type>)]`", ty.name()),
+            format!("should specify a different type for `{}` derive with `#[thiserror_ext(newtype(name = <type>))]`", ty.name()),
         ));
     }
 
@@ -231,7 +242,16 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
         quote!(thiserror_ext::__private::NoExtraBacktrace)
     };
 
-    let doc = format!("The `{}`-wrapped type of [`{}`].", ty.name(), input_type);
+    let doc = format!(
+        "The `{}`-wrapped type of [`{}`].{}",
+        ty.name(),
+        input_type,
+        if backtrace {
+            "\n\nA backtrace is captured when the inner error doesn't provide one."
+        } else {
+            ""
+        }
+    );
     let new_type = ty.ty_ident();
     let extra_derive = match ty {
         DeriveNewType::Box => quote!(),
@@ -294,7 +314,7 @@ pub fn derive_ctor(input: &DeriveInput, t: DeriveCtorType) -> Result<TokenStream
 
     let input = match input {
         Input::Struct(input) => {
-            return Err(syn::Error::new_spanned(
+            return Err(Error::new_spanned(
                 input.original,
                 "only `enum` is supported for `Construct` and `ContextInto`",
             ))
