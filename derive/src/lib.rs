@@ -1,3 +1,5 @@
+//! Procedural macros for `thiserror_ext`.
+
 use expand::{DeriveCtorType, DeriveNewType};
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, DeriveInput};

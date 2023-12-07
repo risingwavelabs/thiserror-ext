@@ -1,3 +1,22 @@
+//! Useful extension utilities for [`thiserror`].
+//!
+//! ## Painless construction
+//!
+//! With derive macros of [`Construct`], [`ContextInto`] and [`Macro`],
+//! one can construct an error in a much more convenient way, no matter it's
+//! from scratch or converted from other errors.
+//!
+//! ## Better formatting
+//!
+//! With extension [`AsReport`], one can format an error in a pretty and
+//! concise way, without losing any information from the error sources.
+//!
+//! ## Easier to interact with
+//!
+//! With derive macros of [`derive@Box`] and [`derive@Arc`], one can easily
+//! wrap an `enum` error type into a new type, reducing the size to improve
+//! performance, and automatically capturing backtraces if needed.
+
 #![feature(error_generic_member_access)] // TODO: it's nightly-only
 
 mod as_dyn;

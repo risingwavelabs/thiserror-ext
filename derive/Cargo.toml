@@ -1,6 +1,6 @@
 [package]
 name = "thiserror-ext-derive"
-description = "Proc macros of `thiserror-ext`."
+description = "Procedural macros for `thiserror_ext`."
 version = { workspace = true }
 edition = { workspace = true }
 authors = { workspace = true }

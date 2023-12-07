@@ -1,6 +1,6 @@
 [package]
 name = "thiserror-ext"
-description = "Extensions to `thiserror`."
+description = "Useful extension utilities for `thiserror`."
 version = { workspace = true }
 edition = { workspace = true }
 authors = { workspace = true }
