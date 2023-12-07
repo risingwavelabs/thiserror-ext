@@ -1,5 +1,6 @@
-/// Extension trait for [`std::error::Error`] that casts the error to
-/// a trait object.
+/// Extension trait for [`Error`] that casts the error to a trait object.
+///
+/// [`Error`]: std::error::Error
 pub trait AsDyn: crate::error_sealed::Sealed {
     /// Casts the error to a trait object.
     fn as_dyn(&self) -> &(dyn std::error::Error + '_);

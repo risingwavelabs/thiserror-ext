@@ -17,11 +17,24 @@
 
 use std::{backtrace::Backtrace, fmt};
 
-/// Extension trait for [`std::error::Error`] that provides a [`Report`]
-/// that formats the error and its sources in a cleaned-up way.
+/// Extension trait for [`Error`] that provides a [`Report`] which formats
+/// the error and its sources in a cleaned-up way.
+///
+/// [`Error`]: std::error::Error
 pub trait AsReport: crate::error_sealed::Sealed {
     /// Returns a [`Report`] that formats the error and its sources in a
     /// cleaned-up way.
+    ///
+    /// See the documentation for [`Report`] for what the formatting looks
+    /// like under different options.
+    ///
+    /// # Example
+    /// ```no_run
+    /// use thiserror::AsReport;
+    ///
+    /// let error = fallible_action().unwrap_err();
+    /// println!("{}", error.as_report());
+    /// ```
     fn as_report(&self) -> Report<'_>;
 
     /// Converts the error to a [`Report`] and formats it in a compact way.
@@ -109,6 +122,8 @@ crate::for_dyn_error_types! { impl_as_report }
 
 /// A wrapper around an error that provides a cleaned up error trace for
 /// display and debug formatting.
+///
+/// Constructed using [`AsReport::as_report`].
 ///
 /// # Formatting
 ///

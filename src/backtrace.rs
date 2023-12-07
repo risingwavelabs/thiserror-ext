@@ -10,6 +10,7 @@ pub trait WithBacktrace {
 }
 
 /// Do not capture extra backtrace.
+#[derive(Clone, Copy)]
 pub struct NoExtraBacktrace;
 
 /// Capture backtrace if the error does not already have one.

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::backtrace::WithBacktrace;
 
-/// Workaround for https://github.com/rust-lang/rust/issues/117432.
+/// A [`Box`] with optional backtrace.
 #[derive(Clone)]
 #[repr(transparent)]
 pub struct ErrorBox<T, B>(Box<(T, B)>);
@@ -23,6 +23,7 @@ impl<T, B> std::ops::DerefMut for ErrorBox<T, B> {
     }
 }
 
+/// A [`Arc`] with optional backtrace.
 #[repr(transparent)]
 pub struct ErrorArc<T, B>(Arc<(T, B)>);
 
