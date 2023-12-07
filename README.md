@@ -29,21 +29,26 @@ enum ErrorKind {
     NotImplemented {
         issue: Option<i32>,
         #[message] msg: String,
-    }
+    },
 
     #[error("internal error: {0}")]
     Internal(String),
 }
 
+// `thiserror_ext::Construct`
+let error: Error = Error::internal("oops");
+
 // `thiserror_ext::Box`
 assert_eq!(std::mem::size_of::<Error>(), std::mem::size_of::<usize>());
-let _: &Backtrace = std::error::request_ref(&error).unwrap();
-
-// `thiserror_ext::Construct`
-let _: Error = Error::internal("oops");
+let bt: &Backtrace = std::error::request_ref(&error).unwrap();
 
 // `thiserror_ext::ContextInto`
-let _: Result<i32, Error> = "foo".parse::<i32>().into_parse("foo");
+let result: Result<i32, Error> = "foo".parse().into_parse("foo");
+
+// `thiserror_ext::AsReport`
+//
+// "cannot parse int from `foo`: invalid digit found in string"
+println!("{}", result.unwrap_err().as_report());
 
 // `thiserror_ext::Macro`
 bail_not_implemented!(issue = 42, "an {} feature", "awesome");
