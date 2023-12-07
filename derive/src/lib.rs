@@ -15,7 +15,7 @@ mod thiserror;
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```ignore
 /// #[derive(Debug, thiserror::Error, thiserror_ext::Construct)]
 /// enum Error {
 ///     #[error("unsupported feature: {0}")]
@@ -63,7 +63,7 @@ pub fn derive_construct(input: TokenStream) -> TokenStream {
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```ignore
 /// #[derive(Debug, thiserror::Error, thiserror_ext::ContextInto)]
 /// enum Error {
 ///     #[error("cannot parse int from `{from}`")]
@@ -124,7 +124,7 @@ pub fn derive_context_into(input: TokenStream) -> TokenStream {
 ///
 /// ## Example
 ///
-/// ```no_run
+/// ```ignore
 /// #[derive(Debug, thiserror::Error, thiserror_ext::Macro)]
 /// enum Error {
 ///     #[error("internal error: {msg}")]
@@ -149,7 +149,7 @@ pub fn derive_context_into(input: TokenStream) -> TokenStream {
 ///
 /// ## Example
 ///
-/// ```no_run
+/// ```ignore
 /// #[derive(Debug, thiserror::Error, thiserror_ext::Macro)]
 /// #[error("not yet implemented: {message}")]
 /// struct NotYetImplemented {
@@ -218,7 +218,7 @@ pub fn derive_macro(input: TokenStream) -> TokenStream {
 ///
 /// ## Example
 ///
-/// ```no_run
+/// ```ignore
 /// #[derive(Debug, thiserror::Error, thiserror_ext::Box)]
 /// #[thiserror_ext(newtype(name = Error))]
 /// enum ErrorKind {
@@ -255,7 +255,7 @@ pub fn derive_macro(input: TokenStream) -> TokenStream {
 ///
 /// ## Example
 ///
-/// ```no_run
+/// ```ignore
 /// # use std::backtrace::Backtrace;
 /// #[derive(Debug, thiserror::Error, thiserror_ext::Box)]
 /// #[thiserror_ext(newtype(name = Error, backtrace))]
