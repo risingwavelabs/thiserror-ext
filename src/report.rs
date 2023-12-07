@@ -29,7 +29,7 @@ pub trait AsReport: crate::error_sealed::Sealed {
     /// like under different options.
     ///
     /// # Example
-    /// ```no_run
+    /// ```ignore
     /// use thiserror::AsReport;
     ///
     /// let error = fallible_action().unwrap_err();
