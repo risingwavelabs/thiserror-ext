@@ -28,11 +28,20 @@ fn eval() -> Result<(), MyError> {
     eval_add().into_context("add")
 }
 
+fn eval_args(args: &str) -> Result<(), MyError> {
+    eval_add().into_context_with(|| format!("add({args})"))
+}
+
 fn main() {
     let err = eval().unwrap_err();
-
     assert_eq!(
         err.to_report_string(),
         "failed to evaluate expression `add`: not supported"
+    );
+
+    let err = eval_args("int, int").unwrap_err();
+    assert_eq!(
+        err.to_report_string(),
+        "failed to evaluate expression `add(int, int)`: not supported"
     );
 }

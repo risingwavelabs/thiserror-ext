@@ -57,7 +57,9 @@ pub fn derive_construct(input: TokenStream) -> TokenStream {
 /// on the error field if there're extra fields in the variant.
 ///
 /// The extension trait is only generated when there's a field named `source`
-/// or marked with `#[source]` but not `#[from]`.
+/// or marked with `#[source]` but not `#[from]`. The rest of the fields (except
+/// the backtrace) are treated as the context. Both single and multiple context
+/// fields are supported.
 ///
 /// # Example
 ///
@@ -83,6 +85,9 @@ pub fn derive_construct(input: TokenStream) -> TokenStream {
 ///
 /// // Can also be called on `Result<T, ExternalError>`
 /// let _: Result<i32, Error> = "foo".parse().into_parse_int("foo");
+///
+/// // Call `into_*_with` with a closure to lazily evaluate the context.
+/// let _: Result<i32, Error> = "foo".parse().into_parse_int_with(|| format!("{}", 1 + 1));
 /// ```
 ///
 /// # New type

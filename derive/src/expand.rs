@@ -10,6 +10,8 @@ use crate::thiserror::ast::{Field, Input, Variant};
 
 struct Args {
     other_args: Vec<TokenStream>,
+    other_names: Vec<Ident>,
+    other_tys: Vec<Type>,
     source_arg: Option<TokenStream>,
     ctor_args: Vec<TokenStream>,
 }
@@ -21,6 +23,8 @@ enum SourceInto {
 
 fn resolve_variant_args(variant: &Variant<'_>, source_into: SourceInto) -> Args {
     let mut other_args = Vec::new();
+    let mut other_names = Vec::new();
+    let mut other_tys = Vec::new();
     let mut source_arg = None;
     let mut ctor_args = Vec::new();
 
@@ -63,12 +67,16 @@ fn resolve_variant_args(variant: &Variant<'_>, source_into: SourceInto) -> Args 
             }
         } else {
             other_args.push(quote!(#name: impl Into<#ty>,));
+            other_names.push(name.clone());
+            other_tys.push((**ty).clone());
             ctor_args.push(quote!(#member: #name.into(),));
         }
     }
 
     Args {
         other_args,
+        other_names,
+        other_tys,
         source_arg,
         ctor_args,
     }
@@ -359,6 +367,8 @@ pub fn derive_ctor(input: &DeriveInput, t: DeriveCtorType) -> Result<TokenStream
 
         let Args {
             other_args,
+            other_names,
+            other_tys,
             source_arg,
             ctor_args,
         } = resolve_variant_args(
@@ -399,37 +409,89 @@ pub fn derive_ctor(input: &DeriveInput, t: DeriveCtorType) -> Result<TokenStream
                 let source_ty_name = get_type_string(source_ty);
 
                 let ext_name = format_ident!("Into{}", variant_name, span = variant_name.span());
-                let method_name = format_ident!(
-                    "into_{}",
-                    big_camel_case_to_snake_case(&variant_name.to_string()),
-                    span = variant_name.span()
-                );
+
                 let doc_trait = format!(
                     "Extension trait for converting [`{source_ty_name}`] \
                      into [`{input_type}::{variant_name}`] with the given context.",
                 );
-                let doc_method = format!(
-                    "Converts [`{source_ty_name}`] \
-                     into [`{input_type}::{variant_name}`] with the given context.",
-                );
+
+                let method_sig = {
+                    let name = format_ident!(
+                        "into_{}",
+                        big_camel_case_to_snake_case(&variant_name.to_string()),
+                        span = variant_name.span()
+                    );
+                    let doc = format!(
+                        "Converts [`{source_ty_name}`] \
+                         into [`{input_type}::{variant_name}`] with the given context.",
+                    );
+
+                    quote!(
+                        #[doc = #doc]
+                        fn #name(self, #(#other_args)*) -> Self::Ret
+                    )
+                };
+
+                let method_with_sig = {
+                    let name = format_ident!(
+                        "into_{}_with",
+                        big_camel_case_to_snake_case(&variant_name.to_string()),
+                        span = variant_name.span()
+                    );
+                    let doc = format!(
+                        "Converts [`{source_ty_name}`] \
+                         into [`{input_type}::{variant_name}`] with the context returned by the given function.",
+                    );
+
+                    let ret_tys: Vec<_> = other_names
+                        .iter()
+                        .map(|name| format_ident!("__{}", name.to_string().to_uppercase()))
+                        .collect();
+                    let ret_ty_bounds: Vec<_> = ret_tys
+                        .iter()
+                        .zip(other_tys.iter())
+                        .map(|(ret_ty, ty)| quote!(#ret_ty: Into<#ty>))
+                        .collect();
+
+                    quote!(
+                        #[doc = #doc]
+                        fn #name<__F, #( #ret_tys, )*>(
+                            self,
+                            f: __F,
+                        ) -> Self::Ret
+                        where
+                            __F: FnOnce() -> (#( #ret_tys ),*),
+                            #( #ret_ty_bounds, )*
+                    )
+                };
 
                 quote!(
                     #[doc = #doc_trait]
                     #vis trait #ext_name {
                         type Ret;
-                        #[doc = #doc_method]
-                        fn #method_name(self, #(#other_args)*) -> Self::Ret;
-                    }
-                    impl<__T> #ext_name for std::result::Result<__T, #source_ty> {
-                        type Ret = std::result::Result<__T, #impl_type>;
-                        fn #method_name(self, #(#other_args)*) -> Self::Ret {
-                            self.map_err(|#source_arg| #ctor_expr.into())
-                        }
+                        #method_sig;
+                        #method_with_sig;
                     }
                     impl #ext_name for #source_ty {
                         type Ret = #impl_type;
-                        fn #method_name(self, #(#other_args)*) -> Self::Ret {
-                            (|#source_arg| #ctor_expr.into())(self)
+                        #method_sig {
+                            (move |#source_arg| #ctor_expr.into())(self)
+                        }
+                        #method_with_sig {
+                            let (#( #other_names ),*) = f();
+                            (move |#source_arg| #ctor_expr.into())(self)
+                        }
+                    }
+                    impl<__T> #ext_name for std::result::Result<__T, #source_ty> {
+                        type Ret = std::result::Result<__T, #impl_type>;
+                        #method_sig {
+                            self.map_err(move |#source_arg| #ctor_expr.into())
+                        }
+                        #method_with_sig {
+                            self.map_err(move |#source_arg| {
+                                let (#( #other_names ),*) = f();
+                                #ctor_expr.into()
+                            })
                         }
                     }
                 )
