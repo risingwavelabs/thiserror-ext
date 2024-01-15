@@ -2,8 +2,8 @@ use either::{for_both, Either};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use syn::{
-    spanned::Spanned, DeriveInput, Error, GenericArgument, Ident, LitStr, Member, PathArguments,
-    Result, Type, Visibility,
+    DeriveInput, Error, GenericArgument, Ident, LitStr, Member, PathArguments, Result, Type,
+    Visibility,
 };
 
 use crate::thiserror::ast::{Field, Input, Variant};
@@ -378,7 +378,7 @@ pub fn derive_ctor(input: &DeriveInput, t: DeriveCtorType) -> Result<TokenStream
                 let ctor_name = format_ident!(
                     "{}",
                     big_camel_case_to_snake_case(&variant_name.to_string()),
-                    span = variant.original.span()
+                    span = variant_name.span()
                 );
                 let doc = format!("Constructs a [`{input_type}::{variant_name}`] variant.");
 
@@ -398,12 +398,11 @@ pub fn derive_ctor(input: &DeriveInput, t: DeriveCtorType) -> Result<TokenStream
                 let source_ty = variant.source_field().unwrap().ty;
                 let source_ty_name = get_type_string(source_ty);
 
-                let ext_name =
-                    format_ident!("Into{}", variant_name, span = variant.original.span());
+                let ext_name = format_ident!("Into{}", variant_name, span = variant_name.span());
                 let method_name = format_ident!(
                     "into_{}",
                     big_camel_case_to_snake_case(&variant_name.to_string()),
-                    span = variant.original.span()
+                    span = variant_name.span()
                 );
                 let doc_trait = format!(
                     "Extension trait for converting [`{source_ty_name}`] \
