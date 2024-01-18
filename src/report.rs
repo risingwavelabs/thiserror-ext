@@ -198,11 +198,31 @@ impl<'a> fmt::Debug for Report<'a> {
     }
 }
 
+thread_local! {
+    pub(crate) static REPORT_INDENT: std::cell::Cell<usize> = std::cell::Cell::new(0);
+}
+
+pub(crate) fn with_indent_adv<R>(amount: usize, f: impl FnOnce(usize, usize) -> R) -> R {
+    let curr = REPORT_INDENT.get();
+    let next = curr + amount;
+
+    REPORT_INDENT.set(next);
+    let result = f(curr, next);
+    REPORT_INDENT.set(curr);
+
+    result
+}
+
 impl<'a> Report<'a> {
     fn cleaned_error_trace(&self, f: &mut fmt::Formatter, pretty: bool) -> Result<(), fmt::Error> {
-        let cleaned_messages: Vec<_> = CleanedErrorText::new(self.0)
-            .flat_map(|(_error, msg, _cleaned)| Some(msg).filter(|msg| !msg.is_empty()))
-            .collect();
+        let cleaned_messages: Vec<_> = {
+            let iter = CleanedErrorText::new(self.0, pretty);
+
+            with_indent_adv(if pretty { 4 } else { 0 }, |_, _| {
+                iter.flat_map(|(_error, msg, _cleaned)| Some(msg).filter(|msg| !msg.is_empty()))
+                    .collect()
+            })
+        };
 
         let mut visible_messages = cleaned_messages.iter();
 
@@ -218,7 +238,7 @@ impl<'a> Report<'a> {
                 0 | 1 => {}
                 2 => {
                     writeln!(f, "\n\nCaused by:")?;
-                    writeln!(f, "  {}", visible_messages.next().unwrap())?;
+                    writeln!(f, "    {}", visible_messages.next().unwrap())?;
                 }
                 _ => {
                     writeln!(
@@ -228,7 +248,7 @@ impl<'a> Report<'a> {
                     for (i, msg) in visible_messages.enumerate() {
                         // Let's use 1-based indexing for presentation
                         let i = i + 1;
-                        writeln!(f, "{:3}: {}", i, msg)?;
+                        writeln!(f, "{:2}: {}", i, msg)?;
                     }
                 }
             }
@@ -245,12 +265,18 @@ impl<'a> Report<'a> {
 
 /// An iterator over an Error and its sources that removes duplicated
 /// text from the error display strings.
-struct CleanedErrorText<'a>(Option<CleanedErrorTextStep<'a>>);
+struct CleanedErrorText<'a> {
+    step: Option<CleanedErrorTextStep<'a>>,
+    pretty: bool,
+}
 
 impl<'a> CleanedErrorText<'a> {
     /// Constructs the iterator.
-    fn new(error: &'a dyn std::error::Error) -> Self {
-        Self(Some(CleanedErrorTextStep::new(error)))
+    fn new(error: &'a dyn std::error::Error, pretty: bool) -> Self {
+        Self {
+            step: Some(CleanedErrorTextStep::new(error, pretty)),
+            pretty,
+        }
     }
 }
 
@@ -261,25 +287,22 @@ impl<'a> Iterator for CleanedErrorText<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         use std::mem;
 
-        let mut step = self.0.take()?;
+        let mut step = self.step.take()?;
         let mut error_text = mem::take(&mut step.error_text);
 
         match step.error.source() {
             Some(next_error) => {
-                let next_error_text = next_error.to_string();
+                let next_step = CleanedErrorTextStep::new(next_error, self.pretty);
 
                 let cleaned_text = error_text
-                    .trim_end_matches(&next_error_text)
+                    .trim_end_matches(&next_step.error_text)
                     .trim_end()
                     .trim_end_matches(':');
                 let cleaned = cleaned_text.len() != error_text.len();
                 let cleaned_len = cleaned_text.len();
                 error_text.truncate(cleaned_len);
 
-                self.0 = Some(CleanedErrorTextStep {
-                    error: next_error,
-                    error_text: next_error_text,
-                });
+                self.step = Some(next_step);
 
                 Some((step.error, error_text, cleaned))
             }
@@ -294,8 +317,12 @@ struct CleanedErrorTextStep<'a> {
 }
 
 impl<'a> CleanedErrorTextStep<'a> {
-    fn new(error: &'a dyn std::error::Error) -> Self {
-        let error_text = error.to_string();
+    fn new(error: &'a dyn std::error::Error, pretty: bool) -> Self {
+        let error_text = if pretty {
+            format!("{:#}", error)
+        } else {
+            format!("{}", error)
+        };
         Self { error, error_text }
     }
 }

@@ -21,6 +21,7 @@
 
 mod as_dyn;
 mod backtrace;
+mod multi;
 mod ptr;
 mod report;
 
