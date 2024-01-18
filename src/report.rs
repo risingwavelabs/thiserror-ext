@@ -213,6 +213,10 @@ pub(crate) fn with_indent_adv<R>(amount: usize, f: impl FnOnce(usize, usize) -> 
     result
 }
 
+pub(crate) fn in_pretty_report() -> bool {
+    REPORT_INDENT.get() > 0
+}
+
 impl<'a> Report<'a> {
     fn cleaned_error_trace(&self, f: &mut fmt::Formatter, pretty: bool) -> Result<(), fmt::Error> {
         let cleaned_messages: Vec<_> = {

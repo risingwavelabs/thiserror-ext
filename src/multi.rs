@@ -3,7 +3,10 @@ use std::{
     fmt::{Debug, Display},
 };
 
-use crate::{report::with_indent_adv, AsDyn, AsReport, Report};
+use crate::{
+    report::{in_pretty_report, with_indent_adv},
+    AsDyn, Report,
+};
 
 pub struct MultiError<E: ?Sized = dyn Error + Send + Sync + 'static>(Vec<Box<E>>);
 
@@ -32,19 +35,31 @@ where
         } else if self.0.len() == 1 {
             Display::fmt(self.0.first().unwrap(), f)
         } else {
-            f.write_str("Multiple errors occured\n")?;
-            with_indent_adv(2, |curr, _| {
-                for (i, error) in self.0.iter().enumerate() {
-                    for _ in 0..curr {
-                        f.write_str(" ")?;
+            f.write_str("Multiple errors occured")?;
+            if in_pretty_report() || f.alternate() {
+                with_indent_adv(2, |curr, _| {
+                    f.write_str("\n")?;
+                    for (i, error) in self.0.iter().enumerate() {
+                        for _ in 0..curr {
+                            f.write_str(" ")?;
+                        }
+                        write!(f, "* {}", Report(error.as_dyn()))?;
+                        if i != self.0.len() - 1 {
+                            f.write_str("\n")?;
+                        }
                     }
-                    write!(f, "* {}", Report(error.as_dyn()))?;
+                    Ok(())
+                })
+            } else {
+                f.write_str(": ")?;
+                for (i, error) in self.0.iter().enumerate() {
+                    write!(f, "[{}]", Report(error.as_dyn()))?;
                     if i != self.0.len() - 1 {
-                        f.write_str("\n")?;
+                        f.write_str(", ")?;
                     }
                 }
                 Ok(())
-            })
+            }
         }
     }
 }
@@ -92,19 +107,13 @@ mod tests {
         do_test(
             err,
             (
-                expect![[r#"
-                    Multiple errors occured
-                    * context: foo
-                    * bar"#]],
+                expect!["Multiple errors occured: [context: foo], [bar]"],
                 expect![[r#"
                     MultiError([context
 
                     Caused by:
                         foo, "bar"])"#]],
-                expect![[r#"
-                    Multiple errors occured
-                    * context: foo
-                    * bar"#]],
+                expect!["Multiple errors occured: [context: foo], [bar]"],
                 expect![[r#"
                     Multiple errors occured
                     * context: foo
@@ -125,12 +134,7 @@ mod tests {
         do_test(
             outer,
             (
-                expect![[r#"
-                    Multiple errors occured
-                    * context: baz
-                    * Multiple errors occured
-                      * context: foo
-                      * bar"#]],
+                expect!["Multiple errors occured: [context: baz], [Multiple errors occured: [context: foo], [bar]]"],
                 expect![[r#"
                     MultiError([context
 
@@ -139,12 +143,7 @@ mod tests {
 
                     Caused by:
                         foo, "bar"])])"#]],
-                expect![[r#"
-                    Multiple errors occured
-                    * context: baz
-                    * Multiple errors occured
-                      * context: foo
-                      * bar"#]],
+                expect!["Multiple errors occured: [context: baz], [Multiple errors occured: [context: foo], [bar]]"],
                 expect![[r#"
                     Multiple errors occured
                     * context: baz
@@ -166,14 +165,10 @@ mod tests {
             err.as_dyn(),
             (
                 expect!["outer error"],
-                expect![[r#"
-                    Error { context: "outer error", source: Multiple errors occured
-                    * context: foo
-                    * bar }"#]],
-                expect![[r#"
-                    outer error: Multiple errors occured
-                    * context: foo
-                    * bar"#]],
+                expect![[
+                    r#"Error { context: "outer error", source: Multiple errors occured: [context: foo], [bar] }"#
+                ]],
+                expect!["outer error: Multiple errors occured: [context: foo], [bar]"],
                 expect![[r#"
                     outer error
 
@@ -201,13 +196,10 @@ mod tests {
                     Error { context: "outer error", source: middle error
 
                     Caused by:
-                        Multiple errors occured
-                        * context: foo
-                        * bar }"#]],
-                expect![[r#"
-                    outer error: middle error: Multiple errors occured
-                    * context: foo
-                    * bar"#]],
+                        Multiple errors occured: [context: foo], [bar] }"#]],
+                expect![
+                    "outer error: middle error: Multiple errors occured: [context: foo], [bar]"
+                ],
                 expect![[r#"
                     outer error
 
@@ -241,17 +233,8 @@ mod tests {
                     Error { context: "outer error", source: middle error
 
                     Caused by:
-                        Multiple errors occured
-                        * context: baz
-                        * Multiple errors occured
-                          * context: foo
-                          * bar }"#]],
-                expect![[r#"
-                    outer error: middle error: Multiple errors occured
-                    * context: baz
-                    * Multiple errors occured
-                      * context: foo
-                      * bar"#]],
+                        Multiple errors occured: [context: baz], [Multiple errors occured: [context: foo], [bar]] }"#]],
+                expect!["outer error: middle error: Multiple errors occured: [context: baz], [Multiple errors occured: [context: foo], [bar]]"],
                 expect![[r#"
                     outer error
 
