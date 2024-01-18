@@ -76,8 +76,8 @@ fn test_report_display_alternate() {
         outer error
 
         Caused by these errors (recent errors listed first):
-          1: middle error
-          2: inner error
+         1: middle error
+         2: inner error
     "#]];
     expect.assert_eq(&format!("{:#}", outer(true).unwrap_err().as_report()));
 }
@@ -88,7 +88,7 @@ fn test_report_display_alternate_single_source() {
         middle error
 
         Caused by:
-          inner error
+            inner error
     "#]];
     expect.assert_eq(&format!("{:#}", middle(true).unwrap_err().as_report()));
 }
@@ -121,8 +121,8 @@ fn test_report_debug_alternate() {
         outer error
 
         Caused by these errors (recent errors listed first):
-          1: middle error
-          2: inner error
+         1: middle error
+         2: inner error
 
         Backtrace:
         disabled backtrace
@@ -137,8 +137,8 @@ fn test_report_debug_alternate_no_backtrace() {
         outer error
 
         Caused by these errors (recent errors listed first):
-          1: middle error
-          2: inner error
+         1: middle error
+         2: inner error
     "#]];
     expect.assert_eq(&format!("{:#?}", outer(false).unwrap_err().as_report()));
 }

@@ -26,6 +26,7 @@ mod ptr;
 mod report;
 
 pub use as_dyn::AsDyn;
+pub use multi::MultiError;
 pub use report::{AsReport, Report};
 pub use thiserror_ext_derive::*;
 
