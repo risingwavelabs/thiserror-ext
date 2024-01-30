@@ -114,7 +114,7 @@ fn resolve_args_for_macro(fields: &[Field<'_>]) -> MacroArgs {
             };
             ctor_args.push(quote!(#member: #expr,))
         } else if field.is_message() {
-            ctor_args.push(quote!(#member: ::std::format!($($fmt_arg)*).into(),));
+            ctor_args.push(quote!(#member: message.into(),));
         } else {
             other_args.push(quote!(#name = $#name:expr,));
             other_call_args.push(quote!(#name));
@@ -638,9 +638,10 @@ pub fn derive_macro_inner(input: &DeriveInput, bail: bool) -> Result<TokenStream
         };
 
         let full = quote!(
-            (@ #(#other_args)* #message_arg) => {
+            (@ #(#other_args)* #message_arg) => {{
+                let message = ::thiserror_ext::__private::message!(#message_call_arg);
                 #full_inner
-            };
+            }};
         );
 
         let macro_export = if let Visibility::Public(_) = &vis {

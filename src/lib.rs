@@ -33,6 +33,22 @@ pub mod __private {
     pub use crate::backtrace::{MaybeBacktrace, NoExtraBacktrace};
     pub use crate::ptr::{ErrorArc, ErrorBox};
     pub use thiserror;
+
+    #[macro_export]
+    #[doc(hidden)]
+    macro_rules! message {
+        ($msg:literal $(,)?) => {
+            ::std::format!($msg)
+        };
+        ($err:expr $(,)?) => {{
+            use $crate::AsReport;
+            $err.to_report_string()
+        }};
+        ($fmt:expr, $($arg:tt)*) => {
+            ::std::format!($fmt, $($arg)*)
+        };
+    }
+    pub use message;
 }
 
 macro_rules! for_dyn_error_types {
