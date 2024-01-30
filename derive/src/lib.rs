@@ -116,7 +116,8 @@ pub fn derive_context_into(input: TokenStream) -> TokenStream {
 ///
 /// It's common to put a message string in the error variant. With this macro,
 /// one can directly format the message in the macro call, instead of calling
-/// [`format!`].
+/// [`format!`]. One can also pass an error directly to the macro, where the
+/// [`Report`](struct.Report.html) of the error will be used as the message.
 ///
 /// To mark a field as the message to be formatted, name it `message` or mark
 /// it with `#[message]`. The message field can be any type that implements
@@ -136,6 +137,10 @@ pub fn derive_context_into(input: TokenStream) -> TokenStream {
 ///
 /// // Equivalent to `return Err(Error::Internal { msg: format!(..).into() }.into())`.
 /// bail_internal!("{} is a bad number", 42);
+///
+/// let inner = "foo".parse::<i32>().unwrap_err();
+/// // Equivalent to `Error::Internal { msg: inner.to_report_string().into() }`.
+/// let _: Error = internal!(inner);
 /// ```
 ///
 /// # Extra fields
