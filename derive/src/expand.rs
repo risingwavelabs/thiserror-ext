@@ -135,6 +135,7 @@ struct DeriveMeta {
     nt_report_debug: bool,
     macro_mangle: bool,
     macro_path: Option<TokenStream>,
+    macro_vis: Option<Visibility>,
 }
 
 fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
@@ -143,6 +144,7 @@ fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
     let mut nt_report_debug = false;
     let mut macro_mangle = false;
     let mut macro_path = None;
+    let mut macro_vis = None;
 
     for attr in &input.attrs {
         if attr.path().is_ident("thiserror_ext") {
@@ -182,6 +184,13 @@ fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
                                     "macro path should start with `crate`",
                                 ));
                             }
+                        } else if meta.path.is_ident("vis") {
+                            let value = meta.value()?;
+                            macro_vis = Some(if let Ok(lit_str) = value.parse::<LitStr>() {
+                                lit_str.parse()?
+                            } else {
+                                value.parse()?
+                            })
                         } else {
                             return Err(Error::new_spanned(meta.path, "unknown attribute"));
                         }
@@ -202,6 +211,7 @@ fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
         nt_report_debug,
         macro_mangle,
         macro_path,
+        macro_vis,
     })
 }
 
@@ -519,16 +529,16 @@ pub fn derive_ctor(input: &DeriveInput, t: DeriveCtorType) -> Result<TokenStream
 }
 
 pub fn derive_macro_inner(input: &DeriveInput, bail: bool) -> Result<TokenStream> {
-    let input_type = input.ident.clone();
-    let vis = &input.vis;
-
     let DeriveMeta {
         impl_type,
         macro_mangle,
         macro_path,
+        macro_vis,
         ..
     } = resolve_meta(input)?;
 
+    let input_type = input.ident.clone();
+    let vis = macro_vis.unwrap_or_else(|| input.vis.clone());
     let input = Input::from_syn(input)?;
 
     let variants = match input {
