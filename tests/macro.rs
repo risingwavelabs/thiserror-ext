@@ -33,7 +33,7 @@ pub mod inner {
     }
     #[derive(Error, Debug, Macro)]
     #[error("not implemented: {message}, issue: {issue:?}")]
-    #[thiserror_ext(macro(mangle, path = "crate::inner"))]
+    #[thiserror_ext(macro(mangle, path = "crate::inner", vis = pub(super)))]
     pub struct NotImplemented {
         pub issue: Option<i32>,
         pub message: String,
