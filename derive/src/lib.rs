@@ -298,3 +298,12 @@ pub fn derive_arc(input: TokenStream) -> TokenStream {
         .unwrap_or_else(|err| err.to_compile_error())
         .into()
 }
+
+#[proc_macro_derive(ReportDebug)]
+pub fn derive_report_debug(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+
+    expand::derive_report_debug(&input)
+        .unwrap_or_else(|err| err.to_compile_error())
+        .into()
+}
