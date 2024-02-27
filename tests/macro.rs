@@ -41,6 +41,8 @@ pub mod inner {
 }
 
 mod tests {
+    use thiserror_ext::AsReport;
+
     use crate::inner::{BoxMyError, MyError, NotImplemented};
 
     #[test]
@@ -137,5 +139,16 @@ mod tests {
                 message,
             } if message == "1 + 1 != 3"
         ));
+    }
+
+    #[test]
+    fn test_error_as_message() {
+        use crate::inner::not_implemented;
+
+        let e = std::io::Error::new(std::io::ErrorKind::AddrInUse, "hello world");
+        let a: NotImplemented = not_implemented!(issue = 42, e);
+
+        expect_test::expect!["not implemented: hello world, issue: Some(42)"]
+            .assert_eq(&a.to_report_string());
     }
 }
