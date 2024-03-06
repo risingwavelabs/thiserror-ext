@@ -1,3 +1,5 @@
+#![allow(rustdoc::broken_intra_doc_links)]
+
 //! Procedural macros for `thiserror_ext`.
 
 use expand::{DeriveCtorType, DeriveNewType};
@@ -295,6 +297,50 @@ pub fn derive_arc(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     expand::derive_new_type(&input, DeriveNewType::Arc)
+        .unwrap_or_else(|err| err.to_compile_error())
+        .into()
+}
+
+/// Generates the [`Debug`] implementation that delegates to the [`Report`] of
+/// an error.
+///
+/// Generally, the [`Debug`] representation of an error should not be used in
+/// user-facing scenarios. However, if [`Result::unwrap`] or [`Result::expect`]
+/// is called, or an error is used as [`Termination`], the standard library
+/// will format the error with [`Debug`]. By delegating to [`Report`], we ensure
+/// that the error is still formatted in a user-friendly way and the source
+/// chain can be kept in these cases.
+///
+/// # Example
+/// ```no_run
+/// #[derive(thiserror::Error, thiserror_ext::ReportDebug)]
+/// #[error("inner")]
+/// struct Inner;
+///
+/// #[derive(thiserror::Error, thiserror_ext::ReportDebug)]
+/// #[error("outer")]
+/// struct Outer {
+///     #[source]
+///     inner: Inner,
+/// }
+///
+/// let error = Outer { inner: Inner };
+/// println!("{:?}", error);
+/// ```
+///
+/// [`Report`]: thiserror_ext::Report
+/// [`Termination`]: std::process::Termination
+///
+/// # New type
+///
+/// Since the new type delegates its [`Debug`] implementation to the original
+/// error type, if the original error type derives [`ReportDebug`], the new type
+/// will also behave the same.
+#[proc_macro_derive(ReportDebug)]
+pub fn derive_report_debug(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+
+    expand::derive_report_debug(&input)
         .unwrap_or_else(|err| err.to_compile_error())
         .into()
 }
