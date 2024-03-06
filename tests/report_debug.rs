@@ -13,7 +13,13 @@ struct Outer {
 }
 
 #[test]
-#[should_panic]
-fn test() {
-    Err::<(), _>(Outer::default()).unwrap();
+fn test_report_debug() {
+    let debug = format!("{:?}", Outer::default());
+    expect_test::expect![[r#"
+        outer
+
+        Caused by:
+          inner
+    "#]]
+    .assert_eq(&debug);
 }
