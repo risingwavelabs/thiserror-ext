@@ -1,3 +1,5 @@
+#![allow(rustdoc::broken_intra_doc_links)]
+
 //! Procedural macros for `thiserror_ext`.
 
 use expand::{DeriveCtorType, DeriveNewType};

@@ -697,11 +697,14 @@ pub fn derive_macro(input: &DeriveInput) -> Result<TokenStream> {
 pub fn derive_report_debug(input: &DeriveInput) -> Result<TokenStream> {
     let input_type = input.ident.clone();
 
+    // 1. Delegate to `Debug` impl as the backtrace provided by the error
+    //    could be different than where panic happens.
+    // 2. Passthrough the `alternate` flag.
     let generated = quote!(
         impl ::std::fmt::Debug for #input_type {
             fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
                 use ::thiserror_ext::AsReport;
-                write!(f, "{:#}", self.as_report())
+                ::std::fmt::Debug::fmt(&self.as_report(), f)
             }
         }
     );

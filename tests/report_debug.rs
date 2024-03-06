@@ -14,12 +14,29 @@ struct Outer {
 
 #[test]
 fn test_report_debug() {
-    let debug = format!("{:?}", Outer::default());
-    expect_test::expect![[r#"
-        outer
+    let error = Outer::default();
 
-        Caused by:
-          inner
-    "#]]
-    .assert_eq(&debug);
+    expect_test::expect!["outer: inner"].assert_eq(&format!("{:?}", error));
+
+    expect_test::expect![[r#"
+    outer
+
+    Caused by:
+      inner
+"#]]
+    .assert_eq(&format!("{:#?}", error));
+}
+
+#[test]
+#[should_panic]
+fn test_unwrap() {
+    let error = Outer::default();
+    let _ = Err::<(), _>(error).unwrap();
+}
+
+#[test]
+#[should_panic]
+fn test_expect() {
+    let error = Outer::default();
+    let _ = Err::<(), _>(error).expect("intentional panic");
 }
