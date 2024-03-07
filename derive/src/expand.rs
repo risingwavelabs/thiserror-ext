@@ -132,7 +132,6 @@ fn resolve_args_for_macro(fields: &[Field<'_>]) -> MacroArgs {
 struct DeriveMeta {
     impl_type: Ident,
     nt_backtrace: bool,
-    nt_report_debug: bool,
     macro_mangle: bool,
     macro_path: Option<TokenStream>,
     macro_vis: Option<Visibility>,
@@ -141,7 +140,6 @@ struct DeriveMeta {
 fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
     let mut new_type = None;
     let mut nt_backtrace = false;
-    let mut nt_report_debug = false;
     let mut macro_mangle = false;
     let mut macro_path = None;
     let mut macro_vis = None;
@@ -156,8 +154,6 @@ fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
                             new_type = Some(value.parse()?);
                         } else if meta.path.is_ident("backtrace") {
                             nt_backtrace = true;
-                        } else if meta.path.is_ident("report_debug") {
-                            nt_report_debug = true;
                         } else {
                             return Err(Error::new_spanned(meta.path, "unknown attribute"));
                         }
@@ -208,7 +204,6 @@ fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
     Ok(DeriveMeta {
         impl_type,
         nt_backtrace,
-        nt_report_debug,
         macro_mangle,
         macro_path,
         macro_vis,
@@ -248,7 +243,6 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
     let DeriveMeta {
         impl_type,
         nt_backtrace: backtrace,
-        nt_report_debug: report_debug,
         ..
     } = resolve_meta(input)?;
 
@@ -291,12 +285,6 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
         DeriveNewType::Arc => quote!(),
     };
 
-    let debug_receiver = if report_debug {
-        quote!(&thiserror_ext::AsReport::as_report(&self.0))
-    } else {
-        quote!(&self.0)
-    };
-
     let generated = quote!(
         #[doc = #doc]
         #[derive(thiserror_ext::__private::thiserror::Error, #extra_derive)]
@@ -322,7 +310,7 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
 
         impl std::fmt::Debug for #impl_type {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                std::fmt::Debug::fmt(#debug_receiver, f)
+                std::fmt::Debug::fmt(&self.0, f)
             }
         }
 

@@ -1,11 +1,14 @@
+#![feature(error_generic_member_access)]
+
 use thiserror::Error;
-use thiserror_ext::ReportDebug;
+use thiserror_ext::{Box, ReportDebug};
 
 #[derive(Error, ReportDebug, Default)]
 #[error("inner")]
 struct Inner;
 
-#[derive(Error, ReportDebug, Default)]
+#[derive(Error, ReportDebug, Default, Box)]
+#[thiserror_ext(newtype(name = BoxOuter))]
 #[error("outer")]
 struct Outer {
     #[source]
@@ -25,6 +28,10 @@ fn test_report_debug() {
       inner
 "#]]
     .assert_eq(&format!("{:#?}", error));
+
+    let boxed = BoxOuter::from(error);
+
+    expect_test::expect!["outer: inner"].assert_eq(&format!("{:?}", boxed));
 }
 
 #[test]
