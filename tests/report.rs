@@ -95,7 +95,7 @@ fn test_report_display_alternate_single_source() {
 
 // Show that there's extra backtrace information compared to `Display`.
 // Backtrace is intentionally disabled to make the test deterministic.
-#[sealed_test(env = [("RUST_BACKTRACE", "0")])]
+#[sealed_test(env = [("RUST_BACKTRACE", "0"), ("THISERROR_EXT_TEST_SHOW_USELESS_BACKTRACE", "1")])]
 fn test_report_debug() {
     let expect = expect![[r#"
         outer error: middle error: inner error
@@ -115,7 +115,7 @@ fn test_report_debug_no_backtrace() {
 
 // Show that there's extra backtrace information compared to `Display`.
 // Backtrace is intentionally disabled to make the test deterministic.
-#[sealed_test(env = [("RUST_BACKTRACE", "0")])]
+#[sealed_test(env = [("RUST_BACKTRACE", "0"), ("THISERROR_EXT_TEST_SHOW_USELESS_BACKTRACE", "1")])]
 fn test_report_debug_alternate() {
     let expect = expect![[r#"
         outer error
@@ -141,4 +141,18 @@ fn test_report_debug_alternate_no_backtrace() {
           2: inner error
     "#]];
     expect.assert_eq(&format!("{:#?}", outer(false).unwrap_err().as_report()));
+}
+
+// If there's disabled backtrace, the behavior should be exactly the same as `Display` too.
+// Note that `THISERROR_EXT_TEST_SHOW_USELESS_BACKTRACE` is not set so this mimics the user's environment.
+#[sealed_test(env = [("RUST_BACKTRACE", "0")])]
+fn test_report_debug_alternate_disabled_backtrace() {
+    let expect = expect![[r#"
+        outer error
+
+        Caused by these errors (recent errors listed first):
+          1: middle error
+          2: inner error
+    "#]];
+    expect.assert_eq(&format!("{:#?}", outer(true).unwrap_err().as_report()));
 }
