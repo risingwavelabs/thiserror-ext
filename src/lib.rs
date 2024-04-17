@@ -17,14 +17,17 @@
 //! wrap an `enum` error type into a new type, reducing the size to improve
 //! performance, and automatically capturing backtraces if needed.
 
+#![deny(missing_docs)]
 #![feature(error_generic_member_access)] // TODO: it's nightly-only
 
 mod as_dyn;
 mod backtrace;
+mod disable_backtrace;
 mod ptr;
 mod report;
 
 pub use as_dyn::AsDyn;
+pub use disable_backtrace::DisableBacktrace;
 pub use report::{AsReport, Report};
 pub use thiserror_ext_derive::*;
 

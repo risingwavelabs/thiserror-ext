@@ -1,3 +1,5 @@
+#![allow(missing_docs)] // used in generated code only
+
 use std::sync::Arc;
 
 use crate::backtrace::WithBacktrace;

@@ -1,3 +1,4 @@
+#![deny(missing_docs)]
 #![allow(rustdoc::broken_intra_doc_links)]
 
 //! Procedural macros for `thiserror_ext`.
