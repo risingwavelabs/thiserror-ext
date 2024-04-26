@@ -23,6 +23,7 @@ impl WithBacktrace for NoExtraBacktrace {
 
 #[cfg(feature = "backtrace")]
 mod maybe {
+    use super::WithBacktrace;
     use std::backtrace::Backtrace;
 
     /// Capture backtrace if the error does not already have one.
