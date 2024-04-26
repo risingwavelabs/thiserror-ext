@@ -12,16 +12,27 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - toolchain: "1.77"
+            features: ""
+          - toolchain: "nightly-2023-12-26"
+            features: "--features backtrace"
 
     steps:
       - uses: actions/checkout@v3
+      - name: Override Rust toolchain
+        run: rustup override set ${{ matrix.toolchain }}
       - name: Add Rust components
         run: rustup component add rustfmt clippy
       - name: Format
         run: cargo fmt --check
       - name: Build
-        run: cargo build --all-targets --all-features
+        run: cargo build  --all-targets ${{ matrix.features }}
       - name: Clippy
-        run: cargo clippy --all-targets --all-features
+        run: cargo clippy ${{ matrix.features }} -- -D warnings
       - name: Run tests
-        run: cargo test
+        run: cargo test   --workspace ${{ matrix.features }}
+      - name: Generate docs
+        run: RUSTDOCFLAGS="-Dwarnings --cfg docsrs" cargo doc --no-deps

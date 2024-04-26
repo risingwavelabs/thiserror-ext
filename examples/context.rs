@@ -1,7 +1,7 @@
 //! This example demonstrates how to achieve the similar functionality as
 //! [`anyhow::Context`] with `thiserror_ext`, in a type-safer manner.
 
-#![feature(error_generic_member_access)]
+#![cfg_attr(feature = "backtrace", feature(error_generic_member_access))]
 
 use thiserror::Error;
 use thiserror_ext::{AsReport, Box, ContextInto, Macro};

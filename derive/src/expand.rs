@@ -153,7 +153,14 @@ fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
                             let value = meta.value()?;
                             new_type = Some(value.parse()?);
                         } else if meta.path.is_ident("backtrace") {
-                            nt_backtrace = true;
+                            if cfg!(feature = "backtrace") {
+                                nt_backtrace = true;
+                            } else {
+                                return Err(Error::new_spanned(
+                                    meta.path,
+                                    "enable the `backtrace` feature to use `backtrace` attribute",
+                                ));
+                            }
                         } else {
                             return Err(Error::new_spanned(meta.path, "unknown attribute"));
                         }
@@ -274,6 +281,11 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
         DeriveNewType::Box => quote!(),
         DeriveNewType::Arc => quote!(Clone),
     };
+    let backtrace_attr = if cfg!(feature = "backtrace") {
+        quote!(#[backtrace])
+    } else {
+        quote!()
+    };
 
     let into_inner = match ty {
         DeriveNewType::Box => quote!(
@@ -291,7 +303,7 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
         #[error(transparent)]
         #vis struct #impl_type(
             #[from]
-            #[backtrace]
+            #backtrace_attr
             thiserror_ext::__private::#new_type<
                 #input_type,
                 #backtrace_type_param,
