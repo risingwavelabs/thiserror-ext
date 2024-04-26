@@ -18,6 +18,9 @@ anyhow = "1"
 expect-test = "1"
 sealed_test = "1"
 
+[features]
+backtrace = ["thiserror-ext-derive/backtrace"]
+
 [workspace]
 members = ["derive"]
 package.version = "0.1.2"

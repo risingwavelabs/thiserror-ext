@@ -12,6 +12,9 @@ license = { workspace = true }
 [lib]
 proc-macro = true
 
+[features]
+backtrace = []
+
 [dependencies]
 either = "1"
 proc-macro2 = "1"

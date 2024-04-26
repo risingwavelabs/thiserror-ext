@@ -17,7 +17,7 @@
 //! wrap an `enum` error type into a new type, reducing the size to improve
 //! performance, and automatically capturing backtraces if needed.
 
-#![feature(error_generic_member_access)] // TODO: it's nightly-only
+#![cfg_attr(feature = "backtrace", feature(error_generic_member_access))]
 
 mod as_dyn;
 mod backtrace;
@@ -30,7 +30,9 @@ pub use thiserror_ext_derive::*;
 
 #[doc(hidden)]
 pub mod __private {
-    pub use crate::backtrace::{MaybeBacktrace, NoExtraBacktrace};
+    #[cfg(feature = "backtrace")]
+    pub use crate::backtrace::MaybeBacktrace;
+    pub use crate::backtrace::NoExtraBacktrace;
     pub use crate::ptr::{ErrorArc, ErrorBox};
     pub use thiserror;
 }

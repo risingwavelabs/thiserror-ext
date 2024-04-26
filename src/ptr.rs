@@ -78,6 +78,7 @@ macro_rules! impl_methods {
             }
 
             // https://github.com/rust-lang/rust/issues/117432
+            #[cfg(feature = "backtrace")]
             fn provide<'a>(&'a self, request: &mut std::error::Request<'a>) {
                 self.backtrace().provide(request);
                 T::provide(self.inner(), request);

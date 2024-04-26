@@ -187,15 +187,16 @@ impl<'a> fmt::Display for Report<'a> {
 
 impl<'a> fmt::Debug for Report<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // Hack for testing purposes.
-        // Read the env var could be slow but we short-circuit it in release mode,
-        // so this should be optimized out in production.
-        let force_show_backtrace = cfg!(debug_assertions)
-            && std::env::var("THISERROR_EXT_TEST_SHOW_USELESS_BACKTRACE").is_ok();
-
         self.cleaned_error_trace(f, f.alternate())?;
 
+        #[cfg(feature = "backtrace")]
         if let Some(bt) = std::error::request_ref::<Backtrace>(self.0) {
+            // Hack for testing purposes.
+            // Read the env var could be slow but we short-circuit it in release mode,
+            // so this should be optimized out in production.
+            let force_show_backtrace = cfg!(debug_assertions)
+                && std::env::var("THISERROR_EXT_TEST_SHOW_USELESS_BACKTRACE").is_ok();
+
             // If the backtrace is disabled or unsupported, behave as if there's no backtrace.
             if bt.status() == BacktraceStatus::Captured || force_show_backtrace {
                 // The alternate mode contains a trailing newline while non-alternate
