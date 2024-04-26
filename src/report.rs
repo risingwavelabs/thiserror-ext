@@ -29,8 +29,8 @@ pub trait AsReport: crate::error_sealed::Sealed {
     /// like under different options.
     ///
     /// # Example
-    /// ```no_run
-    /// use thiserror::AsReport;
+    /// ```ignore
+    /// use thiserror_ext::AsReport;
     ///
     /// let error = fallible_action().unwrap_err();
     /// println!("{}", error.as_report());

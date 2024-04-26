@@ -33,6 +33,6 @@ jobs:
       - name: Clippy
         run: cargo clippy ${{ matrix.features }} -- -D warnings
       - name: Run tests
-        run: cargo test   ${{ matrix.features }}
+        run: cargo test   --workspace ${{ matrix.features }}
       - name: Generate docs
-        run: RUSTDOCFLAGS="-Dwarnings" cargo doc --no-deps
+        run: RUSTDOCFLAGS="-Dwarnings --cfg docsrs" cargo doc --no-deps
