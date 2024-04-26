@@ -43,6 +43,7 @@ macro_rules! impl_methods {
         }
 
         impl<T, B> $ty<T, B> {
+            #[cfg_attr(not(feature = "backtrace"), allow(dead_code))]
             fn backtrace(&self) -> &B {
                 &self.0.as_ref().1
             }

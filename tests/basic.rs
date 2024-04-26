@@ -1,5 +1,6 @@
-// #![feature(error_generic_member_access)]
+#![cfg_attr(feature = "backtrace", feature(error_generic_member_access))]
 
+#[cfg(feature = "backtrace")]
 use std::backtrace::Backtrace;
 use thiserror::*;
 use thiserror_ext::*;
@@ -27,6 +28,7 @@ pub enum MyErrorInner {
     ParseWithBacktrace {
         #[source]
         error: std::num::ParseIntError,
+        #[cfg(feature = "backtrace")]
         backtrace: Backtrace,
     },
 
@@ -34,6 +36,7 @@ pub enum MyErrorInner {
     ParseWithBacktraceAndContext {
         #[source]
         error: std::num::ParseIntError,
+        #[cfg(feature = "backtrace")]
         backtrace: Backtrace,
         from: String,
     },

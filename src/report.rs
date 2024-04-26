@@ -15,10 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{
-    backtrace::{Backtrace, BacktraceStatus},
-    fmt,
-};
+use std::fmt;
 
 /// Extension trait for [`Error`] that provides a [`Report`] which formats
 /// the error and its sources in a cleaned-up way.
@@ -190,21 +187,25 @@ impl<'a> fmt::Debug for Report<'a> {
         self.cleaned_error_trace(f, f.alternate())?;
 
         #[cfg(feature = "backtrace")]
-        if let Some(bt) = std::error::request_ref::<Backtrace>(self.0) {
-            // Hack for testing purposes.
-            // Read the env var could be slow but we short-circuit it in release mode,
-            // so this should be optimized out in production.
-            let force_show_backtrace = cfg!(debug_assertions)
-                && std::env::var("THISERROR_EXT_TEST_SHOW_USELESS_BACKTRACE").is_ok();
+        {
+            use std::backtrace::{Backtrace, BacktraceStatus};
 
-            // If the backtrace is disabled or unsupported, behave as if there's no backtrace.
-            if bt.status() == BacktraceStatus::Captured || force_show_backtrace {
-                // The alternate mode contains a trailing newline while non-alternate
-                // mode does not. So we need to add a newline before the backtrace.
-                if !f.alternate() {
-                    writeln!(f)?;
+            if let Some(bt) = std::error::request_ref::<Backtrace>(self.0) {
+                // Hack for testing purposes.
+                // Read the env var could be slow but we short-circuit it in release mode,
+                // so this should be optimized out in production.
+                let force_show_backtrace = cfg!(debug_assertions)
+                    && std::env::var("THISERROR_EXT_TEST_SHOW_USELESS_BACKTRACE").is_ok();
+
+                // If the backtrace is disabled or unsupported, behave as if there's no backtrace.
+                if bt.status() == BacktraceStatus::Captured || force_show_backtrace {
+                    // The alternate mode contains a trailing newline while non-alternate
+                    // mode does not. So we need to add a newline before the backtrace.
+                    if !f.alternate() {
+                        writeln!(f)?;
+                    }
+                    writeln!(f, "\nBacktrace:\n{}", bt)?;
                 }
-                writeln!(f, "\nBacktrace:\n{}", bt)?;
             }
         }
 
