@@ -1,4 +1,5 @@
 #![cfg(feature = "backtrace")]
+#![feature(error_generic_member_access)]
 
 use expect_test::expect;
 use sealed_test::prelude::*;
