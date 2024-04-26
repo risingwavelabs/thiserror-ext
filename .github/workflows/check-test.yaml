@@ -14,7 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        toolchain: ["1.77", "nightly-2023-12-26"]
+        include:
+          - toolchain: "1.77"
+            features: ""
+          - toolchain: "nightly-2023-12-26"
+            features: "backtrace"
 
     steps:
       - uses: actions/checkout@v3
@@ -25,8 +29,8 @@ jobs:
       - name: Format
         run: cargo fmt --check
       - name: Build
-        run: cargo build  --all-targets ${{ matrix.toolchain.contains('nightly') && '--all-features' }}
+        run: cargo build  --all-targets --features ${{ matrix.features }}
       - name: Clippy
-        run: cargo clippy --all-targets ${{ matrix.toolchain.contains('nightly') && '--all-features' }}
+        run: cargo clippy --all-targets --features ${{ matrix.features }}
       - name: Run tests
-        run: cargo test   --all-targets ${{ matrix.toolchain.contains('nightly') && '--all-features' }}
+        run: cargo test   --all-targets --features ${{ matrix.features }}
