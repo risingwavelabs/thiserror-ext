@@ -549,14 +549,15 @@ pub fn derive_macro_inner(input: &DeriveInput, bail: bool) -> Result<TokenStream
     let mut items = Vec::new();
 
     for variant in variants {
-        // We only care about variants with `message` field and no `source` or `from` field.
-        if for_both!(&variant, v => v.message_field()).is_none()
-            || for_both!(&variant, v => v.source_field()).is_some()
-        {
+        // We only care about variants with `message` field.
+        if for_both!(&variant, v => v.message_field()).is_none() {
             continue;
         }
 
-        let variant_name = for_both!(&variant, v => &v.ident);
+        let variant_name = match &variant {
+            Either::Left(_s) => quote!(#impl_type), // newtype name
+            Either::Right(v) => v.ident.to_token_stream(),
+        };
         let ctor_path = match &variant {
             Either::Left(_s) => quote!(#macro_path #input_type),
             Either::Right(_v) => quote!(#macro_path #input_type::#variant_name),
@@ -648,6 +649,9 @@ pub fn derive_macro_inner(input: &DeriveInput, bail: bool) -> Result<TokenStream
         };
 
         let full = quote!(
+            () => { // empty macro call
+                #export_name!("")
+            };
             (@ #(#other_args)* #message_arg) => {
                 #full_inner
             };
