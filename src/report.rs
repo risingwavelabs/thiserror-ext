@@ -176,13 +176,13 @@ crate::for_dyn_error_types! { impl_as_report }
 /// ```
 pub struct Report<'a>(pub &'a dyn std::error::Error);
 
-impl<'a> fmt::Display for Report<'a> {
+impl fmt::Display for Report<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.cleaned_error_trace(f, f.alternate())
     }
 }
 
-impl<'a> fmt::Debug for Report<'a> {
+impl fmt::Debug for Report<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.cleaned_error_trace(f, f.alternate())?;
 
@@ -213,7 +213,7 @@ impl<'a> fmt::Debug for Report<'a> {
     }
 }
 
-impl<'a> Report<'a> {
+impl Report<'_> {
     fn cleaned_error_trace(&self, f: &mut fmt::Formatter, pretty: bool) -> Result<(), fmt::Error> {
         let cleaned_messages: Vec<_> = CleanedErrorText::new(self.0)
             .flat_map(|(_error, msg, _cleaned)| Some(msg).filter(|msg| !msg.is_empty()))
