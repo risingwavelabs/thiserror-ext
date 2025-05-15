@@ -10,7 +10,7 @@ categories = { workspace = true }
 license = { workspace = true }
 
 [dependencies]
-thiserror = "1"
+thiserror = "2"
 thiserror-ext-derive = { version = "=0.2.1", path = "derive" }
 
 [dev-dependencies]

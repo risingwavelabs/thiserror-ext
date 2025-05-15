@@ -1,21 +1,27 @@
-use proc_macro2::{Delimiter, Group, Span, TokenStream, TokenTree};
-use quote::{format_ident, quote, ToTokens};
+use proc_macro2::{Delimiter, Group, Literal, Punct, Spacing, Span, TokenStream, TokenTree};
+use quote::{format_ident, quote, quote_spanned, ToTokens};
 use std::collections::BTreeSet as Set;
-use syn::parse::ParseStream;
+use syn::parse::discouraged::Speculative;
+use syn::parse::{End, ParseStream};
 use syn::{
-    braced, bracketed, parenthesized, token, Attribute, Error, Ident, Index, LitInt, LitStr, Meta,
-    Result, Token,
+    braced, bracketed, parenthesized, token, Attribute, Error, ExprPath, Ident, Index, LitFloat,
+    LitInt, LitStr, Meta, Result, Token,
 };
+
+pub struct Extra<'a> {
+    pub message: Option<&'a Attribute>,
+    pub construct_skip: Option<&'a Attribute>,
+    pub context_into_skip: Option<&'a Attribute>,
+}
 
 pub struct Attrs<'a> {
     pub display: Option<Display<'a>>,
-    pub source: Option<&'a Attribute>,
+    pub source: Option<Source<'a>>,
     pub backtrace: Option<&'a Attribute>,
-    pub from: Option<&'a Attribute>,
-    pub message: Option<&'a Attribute>,
+    pub from: Option<From<'a>>,
     pub transparent: Option<Transparent<'a>>,
-    pub construct_skip: Option<&'a Attribute>,
-    pub context_into_skip: Option<&'a Attribute>,
+    pub fmt: Option<Fmt<'a>>,
+    pub extra: Extra<'a>,
 }
 
 #[derive(Clone)]
@@ -23,14 +29,35 @@ pub struct Display<'a> {
     pub original: &'a Attribute,
     pub fmt: LitStr,
     pub args: TokenStream,
+    pub requires_fmt_machinery: bool,
     pub has_bonus_display: bool,
+    pub infinite_recursive: bool,
     pub implied_bounds: Set<(usize, Trait)>,
+    pub bindings: Vec<(Ident, TokenStream)>,
+}
+
+#[derive(Copy, Clone)]
+pub struct Source<'a> {
+    pub original: &'a Attribute,
+    pub span: Span,
+}
+
+#[derive(Copy, Clone)]
+pub struct From<'a> {
+    pub original: &'a Attribute,
+    pub span: Span,
 }
 
 #[derive(Copy, Clone)]
 pub struct Transparent<'a> {
     pub original: &'a Attribute,
     pub span: Span,
+}
+
+#[derive(Clone)]
+pub struct Fmt<'a> {
+    pub original: &'a Attribute,
+    pub path: ExprPath,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
@@ -52,10 +79,13 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
         source: None,
         backtrace: None,
         from: None,
-        message: None,
         transparent: None,
-        construct_skip: None,
-        context_into_skip: None,
+        fmt: None,
+        extra: Extra {
+            message: None,
+            construct_skip: None,
+            context_into_skip: None,
+        },
     };
 
     for attr in input {
@@ -66,7 +96,13 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
             if attrs.source.is_some() {
                 return Err(Error::new_spanned(attr, "duplicate #[source] attribute"));
             }
-            attrs.source = Some(attr);
+            let span = (attr.pound_token.span)
+                .join(attr.bracket_token.span.join())
+                .unwrap_or(attr.path().get_ident().unwrap().span());
+            attrs.source = Some(Source {
+                original: attr,
+                span,
+            });
         } else if attr.path().is_ident("backtrace") {
             attr.meta.require_path_only()?;
             if attrs.backtrace.is_some() {
@@ -84,17 +120,23 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
             if attrs.from.is_some() {
                 return Err(Error::new_spanned(attr, "duplicate #[from] attribute"));
             }
-            attrs.from = Some(attr);
+            let span = (attr.pound_token.span)
+                .join(attr.bracket_token.span.join())
+                .unwrap_or(attr.path().get_ident().unwrap().span());
+            attrs.from = Some(From {
+                original: attr,
+                span,
+            });
         } else if attr.path().is_ident("message") {
             attr.meta.require_path_only()?;
-            if attrs.message.is_some() {
+            if attrs.extra.message.is_some() {
                 return Err(Error::new_spanned(attr, "duplicate #[message] attribute"));
             }
-            attrs.message = Some(attr);
+            attrs.extra.message = Some(attr);
         } else if attr.path().is_ident("construct") {
             attr.parse_nested_meta(|meta| {
                 if meta.path.is_ident("skip") {
-                    attrs.construct_skip = Some(attr);
+                    attrs.extra.construct_skip = Some(attr);
                     Ok(())
                 } else {
                     Err(Error::new_spanned(attr, "expected `skip`"))
@@ -103,7 +145,7 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
         } else if attr.path().is_ident("context_into") {
             attr.parse_nested_meta(|meta| {
                 if meta.path.is_ident("skip") {
-                    attrs.context_into_skip = Some(attr);
+                    attrs.extra.context_into_skip = Some(attr);
                     Ok(())
                 } else {
                     Err(Error::new_spanned(attr, "expected `skip`"))
@@ -116,10 +158,17 @@ pub fn get(input: &[Attribute]) -> Result<Attrs> {
 }
 
 fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Result<()> {
-    syn::custom_keyword!(transparent);
+    mod kw {
+        syn::custom_keyword!(transparent);
+        syn::custom_keyword!(fmt);
+    }
 
     attr.parse_args_with(|input: ParseStream| {
-        if let Some(kw) = input.parse::<Option<transparent>>()? {
+        let lookahead = input.lookahead1();
+        let fmt = if lookahead.peek(LitStr) {
+            input.parse::<LitStr>()?
+        } else if lookahead.peek(kw::transparent) {
+            let kw: kw::transparent = input.parse()?;
             if attrs.transparent.is_some() {
                 return Err(Error::new_spanned(
                     attr,
@@ -131,14 +180,43 @@ fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Resu
                 span: kw.span,
             });
             return Ok(());
-        }
+        } else if lookahead.peek(kw::fmt) {
+            input.parse::<kw::fmt>()?;
+            input.parse::<Token![=]>()?;
+            let path: ExprPath = input.parse()?;
+            if attrs.fmt.is_some() {
+                return Err(Error::new_spanned(
+                    attr,
+                    "duplicate #[error(fmt = ...)] attribute",
+                ));
+            }
+            attrs.fmt = Some(Fmt {
+                original: attr,
+                path,
+            });
+            return Ok(());
+        } else {
+            return Err(lookahead.error());
+        };
+
+        let args = if input.is_empty() || input.peek(Token![,]) && input.peek2(End) {
+            input.parse::<Option<Token![,]>>()?;
+            TokenStream::new()
+        } else {
+            parse_token_expr(input, false)?
+        };
+
+        let requires_fmt_machinery = !args.is_empty();
 
         let display = Display {
             original: attr,
-            fmt: input.parse()?,
-            args: parse_token_expr(input, false)?,
+            fmt,
+            args,
+            requires_fmt_machinery,
             has_bonus_display: false,
+            infinite_recursive: false,
             implied_bounds: Set::new(),
+            bindings: Vec::new(),
         };
         if attrs.display.is_some() {
             return Err(Error::new_spanned(
@@ -154,19 +232,54 @@ fn parse_error_attribute<'a>(attrs: &mut Attrs<'a>, attr: &'a Attribute) -> Resu
 fn parse_token_expr(input: ParseStream, mut begin_expr: bool) -> Result<TokenStream> {
     let mut tokens = Vec::new();
     while !input.is_empty() {
+        if input.peek(token::Group) {
+            let group: TokenTree = input.parse()?;
+            tokens.push(group);
+            begin_expr = false;
+            continue;
+        }
+
         if begin_expr && input.peek(Token![.]) {
             if input.peek2(Ident) {
                 input.parse::<Token![.]>()?;
                 begin_expr = false;
                 continue;
-            }
-            if input.peek2(LitInt) {
+            } else if input.peek2(LitInt) {
                 input.parse::<Token![.]>()?;
                 let int: Index = input.parse()?;
-                let ident = format_ident!("_{}", int.index, span = int.span);
-                tokens.push(TokenTree::Ident(ident));
+                tokens.push({
+                    let ident = format_ident!("_{}", int.index, span = int.span);
+                    TokenTree::Ident(ident)
+                });
                 begin_expr = false;
                 continue;
+            } else if input.peek2(LitFloat) {
+                let ahead = input.fork();
+                ahead.parse::<Token![.]>()?;
+                let float: LitFloat = ahead.parse()?;
+                let repr = float.to_string();
+                let mut indices = repr.split('.').map(syn::parse_str::<Index>);
+                if let (Some(Ok(first)), Some(Ok(second)), None) =
+                    (indices.next(), indices.next(), indices.next())
+                {
+                    input.advance_to(&ahead);
+                    tokens.push({
+                        let ident = format_ident!("_{}", first, span = float.span());
+                        TokenTree::Ident(ident)
+                    });
+                    tokens.push({
+                        let mut punct = Punct::new('.', Spacing::Alone);
+                        punct.set_span(float.span());
+                        TokenTree::Punct(punct)
+                    });
+                    tokens.push({
+                        let mut literal = Literal::u32_unsuffixed(second.index);
+                        literal.set_span(float.span());
+                        TokenTree::Literal(literal)
+                    });
+                    begin_expr = false;
+                    continue;
+                }
             }
         }
 
@@ -224,17 +337,58 @@ fn parse_token_expr(input: ParseStream, mut begin_expr: bool) -> Result<TokenStr
 
 impl ToTokens for Display<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
+        if self.infinite_recursive {
+            let span = self.fmt.span();
+            tokens.extend(quote_spanned! {span=>
+                #[warn(unconditional_recursion)]
+                fn _fmt() { _fmt() }
+            });
+        }
+
         let fmt = &self.fmt;
         let args = &self.args;
-        tokens.extend(quote! {
-            std::write!(__formatter, #fmt #args)
+
+        // Currently `write!(f, "text")` produces less efficient code than
+        // `f.write_str("text")`. We recognize the case when the format string
+        // has no braces and no interpolated values, and generate simpler code.
+        let write = if self.requires_fmt_machinery {
+            quote! {
+                ::core::write!(__formatter, #fmt #args)
+            }
+        } else {
+            quote! {
+                __formatter.write_str(#fmt)
+            }
+        };
+
+        tokens.extend(if self.bindings.is_empty() {
+            write
+        } else {
+            let locals = self.bindings.iter().map(|(local, _value)| local);
+            let values = self.bindings.iter().map(|(_local, value)| value);
+            quote! {
+                match (#(#values,)*) {
+                    (#(#locals,)*) => #write
+                }
+            }
         });
     }
 }
 
 impl ToTokens for Trait {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let trait_name = format_ident!("{}", format!("{:?}", self));
-        tokens.extend(quote!(std::fmt::#trait_name));
+        let trait_name = match self {
+            Trait::Debug => "Debug",
+            Trait::Display => "Display",
+            Trait::Octal => "Octal",
+            Trait::LowerHex => "LowerHex",
+            Trait::UpperHex => "UpperHex",
+            Trait::Pointer => "Pointer",
+            Trait::Binary => "Binary",
+            Trait::LowerExp => "LowerExp",
+            Trait::UpperExp => "UpperExp",
+        };
+        let ident = Ident::new(trait_name, Span::call_site());
+        tokens.extend(quote!(::core::fmt::#ident));
     }
 }
