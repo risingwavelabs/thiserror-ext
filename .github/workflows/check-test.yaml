@@ -15,9 +15,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - toolchain: "1.77"
+          - toolchain: "1.86"
             features: ""
-          - toolchain: "nightly-2023-12-26"
+          - toolchain: "nightly-2025-03-05"
             features: "--features backtrace"
 
     steps:
