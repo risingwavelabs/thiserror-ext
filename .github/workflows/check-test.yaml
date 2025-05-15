@@ -11,14 +11,17 @@ env:
 
 jobs:
   build:
+    name: Build (${{ matrix.channel }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
-          - toolchain: "1.77"
+          - toolchain: "1.86"
             features: ""
-          - toolchain: "nightly-2023-12-26"
+            channel: "stable"
+          - toolchain: "nightly-2025-03-05"
             features: "--features backtrace"
+            channel: "nightly"
 
     steps:
       - uses: actions/checkout@v3

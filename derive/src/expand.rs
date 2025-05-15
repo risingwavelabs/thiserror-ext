@@ -2,11 +2,11 @@ use either::{for_both, Either};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use syn::{
-    DeriveInput, Error, GenericArgument, Ident, LitStr, Member, PathArguments, Result, Type,
-    Visibility,
+    DeriveInput, Error, GenericArgument, Ident, LitStr, PathArguments, Result, Type, Visibility,
 };
 
 use crate::thiserror::ast::{Field, Input, Variant};
+use crate::thiserror::unraw::MemberUnraw;
 
 struct Args {
     other_args: Vec<TokenStream>,
@@ -33,8 +33,8 @@ fn resolve_variant_args(variant: &Variant<'_>, source_into: SourceInto) -> Args 
         let member = &field.member;
 
         let name = match &field.member {
-            Member::Named(named) => named.clone(),
-            Member::Unnamed(_) => {
+            MemberUnraw::Named(named) => named.to_local(),
+            MemberUnraw::Unnamed(_) => {
                 if field.is_non_from_source() {
                     format_ident!("source")
                 } else {
@@ -98,8 +98,8 @@ fn resolve_args_for_macro(fields: &[Field<'_>]) -> MacroArgs {
         let member = &field.member;
 
         let name = match &field.member {
-            Member::Named(named) => named.clone(),
-            Member::Unnamed(_) => format_ident!("arg_{}", i),
+            MemberUnraw::Named(named) => named.to_local(),
+            MemberUnraw::Unnamed(_) => format_ident!("arg_{}", i),
         };
 
         if field.is_backtrace() {
@@ -366,8 +366,8 @@ pub fn derive_ctor(input: &DeriveInput, t: DeriveCtorType) -> Result<TokenStream
         }
 
         let skipped = match t {
-            DeriveCtorType::Construct => variant.attrs.construct_skip.is_some(),
-            DeriveCtorType::ContextInto => variant.attrs.context_into_skip.is_some(),
+            DeriveCtorType::Construct => variant.attrs.extra.construct_skip.is_some(),
+            DeriveCtorType::ContextInto => variant.attrs.extra.context_into_skip.is_some(),
         };
         if skipped {
             continue;

@@ -1,5 +1,7 @@
 use super::ast::{Enum, Field, Struct, Variant};
-use syn::{Member, Type};
+use super::unraw::MemberUnraw;
+use proc_macro2::Span;
+use syn::Type;
 
 impl Struct<'_> {
     pub(crate) fn from_field(&self) -> Option<&Field> {
@@ -40,10 +42,11 @@ impl Enum<'_> {
     pub(crate) fn has_display(&self) -> bool {
         self.attrs.display.is_some()
             || self.attrs.transparent.is_some()
+            || self.attrs.fmt.is_some()
             || self
                 .variants
                 .iter()
-                .any(|variant| variant.attrs.display.is_some())
+                .any(|variant| variant.attrs.display.is_some() || variant.attrs.fmt.is_some())
             || self
                 .variants
                 .iter()
@@ -87,24 +90,34 @@ impl Field<'_> {
             false
         } else if self.attrs.source.is_some() {
             true
-        } else if matches!(&self.member, Member::Named(ident) if ident == "source") {
+        } else if matches!(&self.member, MemberUnraw::Named(ident) if ident == "source") {
             true
         } else {
             false
         }
     }
 
-    /// WHether this field is the `message` field.
+    /// Whether this field is the `message` field.
     pub(crate) fn is_message(&self) -> bool {
-        if self.attrs.message.is_some() {
+        if self.attrs.extra.message.is_some() {
             true
         } else if matches!(
             &self.member,
-            Member::Named(ident) if ident == "message"
+            MemberUnraw::Named(ident) if ident == "message"
         ) {
             true
         } else {
             false
+        }
+    }
+
+    pub(crate) fn source_span(&self) -> Span {
+        if let Some(source_attr) = &self.attrs.source {
+            source_attr.span
+        } else if let Some(from_attr) = &self.attrs.from {
+            from_attr.span
+        } else {
+            self.member.span()
         }
     }
 }
@@ -126,7 +139,7 @@ fn source_field<'a, 'b>(fields: &'a [Field<'b>]) -> Option<&'a Field<'b>> {
     }
     for field in fields {
         match &field.member {
-            Member::Named(ident) if ident == "source" => return Some(field),
+            MemberUnraw::Named(ident) if ident == "source" => return Some(field),
             _ => {}
         }
     }
