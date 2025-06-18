@@ -1,12 +1,3 @@
 {
     "rust-analyzer.cargo.features": "all",
-    "workbench.colorCustomizations": {
-        "editorInlayHint.foreground": "#949494",
-        "editorInlayHint.background": "#00000000",
-        "activityBar.background": "#013613",
-        "titleBar.activeBackground": "#014C1A",
-        "titleBar.activeForeground": "#ECFFF3",
-        "statusBar.background": "#014C1A",
-        "statusBar.foreground": "#ECFFF3"
-    }
 }
