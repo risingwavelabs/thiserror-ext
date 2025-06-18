@@ -281,11 +281,6 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
         DeriveNewType::Box => quote!(),
         DeriveNewType::Arc => quote!(Clone),
     };
-    let backtrace_attr = if cfg!(feature = "backtrace") {
-        quote!(#[backtrace])
-    } else {
-        quote!()
-    };
 
     let into_inner = match ty {
         DeriveNewType::Box => quote!(
@@ -297,13 +292,21 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
         DeriveNewType::Arc => quote!(),
     };
 
+    let provide_fn = if backtrace {
+        quote!(
+            fn provide<'a>(&'a self, request: &mut std::error::Request<'a>) {
+                self.0.provide(request);
+            }
+        )
+        .into()
+    } else {
+        None
+    };
+
     let generated = quote!(
         #[doc = #doc]
-        #[derive(thiserror_ext::__private::thiserror::Error, #extra_derive)]
-        #[error(transparent)]
+        #[derive(#extra_derive)]
         #vis struct #impl_type(
-            #[from]
-            #backtrace_attr
             thiserror_ext::__private::#new_type<
                 #input_type,
                 #backtrace_type_param,
@@ -317,6 +320,20 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
         {
             fn from(error: E) -> Self {
                 Self(thiserror_ext::__private::#new_type::new(error.into()))
+            }
+        }
+
+        impl std::error::Error for #impl_type {
+            fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+                self.0.source()
+            }
+
+            #provide_fn
+        }
+
+        impl std::fmt::Display for #impl_type {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                std::fmt::Display::fmt(&self.0, f)
             }
         }
 
