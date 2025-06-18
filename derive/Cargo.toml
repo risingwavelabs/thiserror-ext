@@ -13,7 +13,8 @@ license = { workspace = true }
 proc-macro = true
 
 [features]
-backtrace = []
+backtrace = ["provide"]
+provide = []
 
 [dependencies]
 either = "1"

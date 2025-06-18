@@ -1,4 +1,4 @@
-#![cfg_attr(feature = "backtrace", feature(error_generic_member_access))]
+#![cfg_attr(feature = "provide", feature(error_generic_member_access))]
 #![allow(dead_code)]
 
 use thiserror::Error;

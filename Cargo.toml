@@ -19,7 +19,8 @@ expect-test = "1"
 sealed_test = "1"
 
 [features]
-backtrace = ["thiserror-ext-derive/backtrace"]
+provide = ["thiserror-ext-derive/provide"]
+backtrace = ["provide"]
 
 [workspace]
 members = ["derive"]

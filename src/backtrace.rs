@@ -3,7 +3,7 @@ pub trait WithBacktrace {
     /// Capture backtrace based on whether the error already has one.
     fn capture(inner: &dyn std::error::Error) -> Self;
 
-    #[cfg(feature = "backtrace")]
+    #[cfg(feature = "provide")]
     /// Provide the backtrace, if any.
     fn provide<'a>(&'a self, request: &mut std::error::Request<'a>);
 }
@@ -17,11 +17,11 @@ impl WithBacktrace for NoExtraBacktrace {
         Self
     }
 
-    #[cfg(feature = "backtrace")]
+    #[cfg(feature = "provide")]
     fn provide<'a>(&'a self, _request: &mut std::error::Request<'a>) {}
 }
 
-#[cfg(feature = "backtrace")]
+#[cfg(feature = "provide")]
 mod maybe {
     use super::WithBacktrace;
     use std::backtrace::Backtrace;
@@ -47,5 +47,5 @@ mod maybe {
     }
 }
 
-#[cfg(feature = "backtrace")]
+#[cfg(feature = "provide")]
 pub use maybe::MaybeBacktrace;

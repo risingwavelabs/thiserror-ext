@@ -1,4 +1,4 @@
-#![cfg(feature = "backtrace")]
+#![cfg(feature = "provide")]
 #![feature(error_generic_member_access)]
 
 use expect_test::expect;

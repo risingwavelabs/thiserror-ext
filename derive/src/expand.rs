@@ -155,7 +155,7 @@ fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
                             let value = meta.value()?;
                             new_type = Some(value.parse()?);
                         } else if meta.path.is_ident("backtrace") {
-                            if cfg!(feature = "backtrace") {
+                            if cfg!(feature = "provide") {
                                 nt_backtrace = true;
                             } else {
                                 return Err(Error::new_spanned(
@@ -164,7 +164,7 @@ fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
                                 ));
                             }
                         } else if meta.path.is_ident("extra_provide") {
-                            if cfg!(feature = "backtrace") {
+                            if cfg!(feature = "provide") {
                                 let value = meta.value()?;
                                 nt_extra_provide = Some(value.parse()?);
                             } else {
