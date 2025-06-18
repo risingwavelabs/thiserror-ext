@@ -132,6 +132,7 @@ fn resolve_args_for_macro(fields: &[Field<'_>]) -> MacroArgs {
 struct DeriveMeta {
     impl_type: Ident,
     nt_backtrace: bool,
+    nt_extra_provide: Option<TokenStream>,
     macro_mangle: bool,
     macro_path: Option<TokenStream>,
     macro_vis: Option<Visibility>,
@@ -140,6 +141,7 @@ struct DeriveMeta {
 fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
     let mut new_type = None;
     let mut nt_backtrace = false;
+    let mut nt_extra_provide = None;
     let mut macro_mangle = false;
     let mut macro_path = None;
     let mut macro_vis = None;
@@ -158,7 +160,17 @@ fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
                             } else {
                                 return Err(Error::new_spanned(
                                     meta.path,
-                                    "enable the `backtrace` feature to use `backtrace` attribute",
+                                    "enable the `backtrace` or `provide` feature to use `backtrace` attribute",
+                                ));
+                            }
+                        } else if meta.path.is_ident("extra_provide") {
+                            if cfg!(feature = "backtrace") {
+                                let value = meta.value()?;
+                                nt_extra_provide = Some(value.parse()?);
+                            } else {
+                                return Err(Error::new_spanned(
+                                    meta.path,
+                                    "enable the `backtrace` or `provide` feature to use `extra_provide` attribute",
                                 ));
                             }
                         } else {
@@ -211,6 +223,7 @@ fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
     Ok(DeriveMeta {
         impl_type,
         nt_backtrace,
+        nt_extra_provide,
         macro_mangle,
         macro_path,
         macro_vis,
@@ -250,6 +263,7 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
     let DeriveMeta {
         impl_type,
         nt_backtrace: backtrace,
+        nt_extra_provide: extra_provide,
         ..
     } = resolve_meta(input)?;
 
@@ -292,10 +306,17 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
         DeriveNewType::Arc => quote!(),
     };
 
-    let provide_fn = if backtrace {
+    let provide_fn = if backtrace || extra_provide.is_some() {
+        let extra_call = if let Some(extra_fn) = &extra_provide {
+            quote!(#extra_fn(self, request);)
+        } else {
+            quote!()
+        };
+
         quote!(
             fn provide<'a>(&'a self, request: &mut std::error::Request<'a>) {
                 self.0.provide(request);
+                #extra_call
             }
         )
         .into()
