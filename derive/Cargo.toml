@@ -17,7 +17,7 @@ backtrace = ["provide"]
 provide = []
 
 [dependencies]
-either = "1"
+either = "1.7"
 proc-macro2 = "1"
 quote = "1"
 syn = "2"
