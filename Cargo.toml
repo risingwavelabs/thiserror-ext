@@ -10,13 +10,13 @@ categories = { workspace = true }
 license = { workspace = true }
 
 [dependencies]
-thiserror = "2"
 thiserror-ext-derive = { version = "=0.3.1-alpha.1", path = "derive" }
 
 [dev-dependencies]
 anyhow = "1"
 expect-test = "1"
 sealed_test = "1"
+thiserror = "2"
 
 [features]
 provide = ["thiserror-ext-derive/provide"]

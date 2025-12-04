@@ -5,6 +5,7 @@
 
 #![allow(dead_code)]
 #![allow(clippy::all)]
+#![allow(mismatched_lifetime_syntaxes)]
 
 pub mod ast;
 pub mod attr;
