@@ -1,4 +1,4 @@
-//! Useful extension utilities for [`thiserror`].
+//! Useful extension utilities for [`thiserror`](https://docs.rs/thiserror).
 //!
 //! ## Painless construction
 //!
