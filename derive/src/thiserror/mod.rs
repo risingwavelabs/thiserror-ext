@@ -4,7 +4,9 @@
 // See `LICENSE` for the original license.
 
 #![allow(dead_code)]
+#![allow(unknown_lints)]
 #![allow(clippy::all)]
+#![allow(mismatched_lifetime_syntaxes)]
 
 pub mod ast;
 pub mod attr;
