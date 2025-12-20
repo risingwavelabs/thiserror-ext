@@ -19,11 +19,14 @@ sealed_test = "1"
 thiserror = "2"
 
 [features]
-provide = ["thiserror-ext-derive/provide"]
+default = ["std"]
+std = []
+provide = ["std", "thiserror-ext-derive/provide"]
 backtrace = ["provide"]
 
 [workspace]
-members = ["derive"]
+members = ["derive", "no_std_test"]
+default-members = [".", "derive"]
 package.version = "0.3.1-alpha.2"
 package.edition = "2021"
 package.authors = ["Bugen Zhao <i@bugenzhao.com>"]

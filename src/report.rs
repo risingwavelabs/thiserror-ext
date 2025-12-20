@@ -15,12 +15,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt;
+use alloc::format;
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
+use core::fmt;
 
 /// Extension trait for [`Error`] that provides a [`Report`] which formats
 /// the error and its sources in a cleaned-up way.
 ///
-/// [`Error`]: std::error::Error
+/// [`Error`]: core::error::Error
 pub trait AsReport: crate::error_sealed::Sealed {
     /// Returns a [`Report`] that formats the error and its sources in a
     /// cleaned-up way.
@@ -101,7 +104,7 @@ pub trait AsReport: crate::error_sealed::Sealed {
     }
 }
 
-impl<T: std::error::Error> AsReport for T {
+impl<T: core::error::Error> AsReport for T {
     fn as_report(&self) -> Report<'_> {
         Report(self)
     }
@@ -174,7 +177,7 @@ crate::for_dyn_error_types! { impl_as_report }
 /// 2. Middle error text
 /// 3. Inner error text
 /// ```
-pub struct Report<'a>(pub &'a dyn std::error::Error);
+pub struct Report<'a>(pub &'a dyn core::error::Error);
 
 impl fmt::Display for Report<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -264,17 +267,17 @@ struct CleanedErrorText<'a>(Option<CleanedErrorTextStep<'a>>);
 
 impl<'a> CleanedErrorText<'a> {
     /// Constructs the iterator.
-    fn new(error: &'a dyn std::error::Error) -> Self {
+    fn new(error: &'a dyn core::error::Error) -> Self {
         Self(Some(CleanedErrorTextStep::new(error)))
     }
 }
 
 impl<'a> Iterator for CleanedErrorText<'a> {
     /// The original error, the display string and if it has been cleaned
-    type Item = (&'a dyn std::error::Error, String, bool);
+    type Item = (&'a dyn core::error::Error, String, bool);
 
     fn next(&mut self) -> Option<Self::Item> {
-        use std::mem;
+        use core::mem;
 
         let mut step = self.0.take()?;
         let mut error_text = mem::take(&mut step.error_text);
@@ -304,12 +307,12 @@ impl<'a> Iterator for CleanedErrorText<'a> {
 }
 
 struct CleanedErrorTextStep<'a> {
-    error: &'a dyn std::error::Error,
+    error: &'a dyn core::error::Error,
     error_text: String,
 }
 
 impl<'a> CleanedErrorTextStep<'a> {
-    fn new(error: &'a dyn std::error::Error) -> Self {
+    fn new(error: &'a dyn core::error::Error) -> Self {
         let error_text = error.to_string();
         Self { error, error_text }
     }

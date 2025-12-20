@@ -1,3 +1,4 @@
+#![cfg(feature = "std")]
 #![cfg_attr(feature = "provide", feature(error_generic_member_access))]
 
 use std::{error::Error, num::ParseIntError};
