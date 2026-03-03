@@ -254,8 +254,8 @@ pub fn derive_macro(input: TokenStream) -> TokenStream {
 /// Specify `#[thiserror_ext(newtype(.., backtrace))]` to enable capturing
 /// backtrace.
 ///
-/// - With feature `backtrace` (stable), a fresh backtrace is always captured
-///   when the error is created.
+/// - By default (stable), a fresh backtrace is always captured when the error
+///   is created.
 /// - With feature `provide` (nightly), a backtrace is captured only if the
 ///   original error type does not already [`provide`] one.
 ///

@@ -81,7 +81,7 @@ mod tests {
                 extra,
                 msg,
                 ..
-            } if extra == "" && msg.as_ref() == "hello 42"
+            } if extra.is_empty() && msg.as_ref() == "hello 42"
         ));
     }
 

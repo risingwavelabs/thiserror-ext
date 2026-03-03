@@ -56,7 +56,24 @@ bail_not_implemented!(issue = 42, "an {} feature", "awesome");
 
 ## Features
 
-- `backtrace`: stable Rust support for `#[thiserror_ext(newtype(.., backtrace))]`.
-  The generated new type exposes `error.backtrace()`.
-- `provide`: nightly-only support for `Error::provide`, including `extra_provide`
-  and backtrace de-duplication when source errors already provide one.
+- `provide`: nightly-only support for `std::error::Error::provide`.
+  It enables:
+  - forwarding provided members from generated newtypes;
+  - backtrace de-duplication when source errors already provide one;
+  - custom provide logic through `extra_provide`:
+
+    ```rust
+    #[derive(thiserror::Error, thiserror_ext::Arc)]
+    #[thiserror_ext(newtype(name = Error, extra_provide = Self::my_extra_provide))]
+    enum ErrorInner {
+        #[error("...")]
+        Foo,
+    }
+
+    impl Error {
+        fn my_extra_provide(&self, request: &mut std::error::Request<'_>) {
+            // request.provide_value(...);
+            // request.provide_ref(...);
+        }
+    }
+    ```

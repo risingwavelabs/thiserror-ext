@@ -1,4 +1,4 @@
-#![cfg(all(feature = "backtrace", not(feature = "provide")))]
+#![cfg(not(feature = "provide"))]
 
 use thiserror::Error;
 use thiserror_ext_derive::Box;

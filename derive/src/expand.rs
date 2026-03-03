@@ -157,14 +157,7 @@ fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
                             let value = meta.value()?;
                             new_type = Some(value.parse()?);
                         } else if meta.path.is_ident("backtrace") {
-                            if cfg!(feature = "backtrace") {
-                                nt_backtrace = true;
-                            } else {
-                                return Err(Error::new_spanned(
-                                    meta.path,
-                                    "enable the `backtrace` feature to use `backtrace` attribute",
-                                ));
-                            }
+                            nt_backtrace = true;
                         } else if meta.path.is_ident("extra_provide") {
                             if cfg!(feature = "provide") {
                                 let value = meta.value()?;
