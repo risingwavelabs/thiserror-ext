@@ -40,7 +40,9 @@ let error: Error = Error::internal("oops");
 
 // `thiserror_ext::Box`
 assert_eq!(std::mem::size_of::<Error>(), std::mem::size_of::<usize>());
+// You can access the backtrace through `backtrace()` method, or nightly-only `std::error::request_ref`.
 let bt: &std::backtrace::Backtrace = error.backtrace().unwrap();
+let bt: &Backtrace = std::error::request_ref(&error).unwrap();
 
 // `thiserror_ext::ContextInto`
 let result: Result<i32, Error> = "foo".parse().into_parse("foo");
