@@ -252,14 +252,18 @@ pub fn derive_macro(input: TokenStream) -> TokenStream {
 /// place.
 ///
 /// Specify `#[thiserror_ext(newtype(.., backtrace))]` to enable capturing
-/// backtrace. The extra backtrace is captured **only if** the original error
-/// type does not [`provide`] one. Typically, this should be maintained by the
-/// `#[backtrace]` attribute from `thiserror`.
+/// backtrace.
+///
+/// - With feature `backtrace` (stable), a fresh backtrace is always captured
+///   when the error is created.
+/// - With feature `provide` (nightly), a backtrace is captured only if the
+///   original error type does not already [`provide`] one.
+///
+/// The generated new type exposes the backtrace by `error.backtrace()`.
 ///
 /// ## Example
 ///
 /// ```ignore
-/// # use std::backtrace::Backtrace;
 /// #[derive(Debug, thiserror::Error, thiserror_ext::Box)]
 /// #[thiserror_ext(newtype(name = Error, backtrace))]
 /// enum ErrorKind {
@@ -268,7 +272,7 @@ pub fn derive_macro(input: TokenStream) -> TokenStream {
 /// }
 ///
 /// let error: Error = ErrorKind::Foo.into();
-/// let backtrace: &Backtrace = std::error::request_ref(&error).unwrap();
+/// let backtrace: &std::backtrace::Backtrace = error.backtrace().unwrap();
 /// ```
 ///
 /// [`Backtrace`]: std::backtrace::Backtrace

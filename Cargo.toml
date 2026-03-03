@@ -21,8 +21,8 @@ thiserror = "2"
 [features]
 default = ["std"]
 std = []
-provide = ["std", "thiserror-ext-derive/provide"]
-backtrace = ["provide"]
+backtrace = ["std", "thiserror-ext-derive/backtrace"]
+provide = ["std", "backtrace", "thiserror-ext-derive/provide"]
 
 [workspace]
 members = ["derive", "no_std_test"]

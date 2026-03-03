@@ -40,7 +40,7 @@ let error: Error = Error::internal("oops");
 
 // `thiserror_ext::Box`
 assert_eq!(std::mem::size_of::<Error>(), std::mem::size_of::<usize>());
-let bt: &Backtrace = std::error::request_ref(&error).unwrap();
+let bt: &std::backtrace::Backtrace = error.backtrace().unwrap();
 
 // `thiserror_ext::ContextInto`
 let result: Result<i32, Error> = "foo".parse().into_parse("foo");
@@ -53,3 +53,10 @@ println!("{}", result.unwrap_err().as_report());
 // `thiserror_ext::Macro`
 bail_not_implemented!(issue = 42, "an {} feature", "awesome");
 ```
+
+## Features
+
+- `backtrace`: stable Rust support for `#[thiserror_ext(newtype(.., backtrace))]`.
+  The generated new type exposes `error.backtrace()`.
+- `provide`: nightly-only support for `Error::provide`, including `extra_provide`
+  and backtrace de-duplication when source errors already provide one.

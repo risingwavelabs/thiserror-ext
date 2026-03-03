@@ -22,8 +22,11 @@ jobs:
           - toolchain: "1.86"
             features: "--no-default-features"
             channel: "stable+no-default-features"
-          - toolchain: "nightly-2025-03-05"
+          - toolchain: "1.86"
             features: "--features backtrace"
+            channel: "stable+backtrace"
+          - toolchain: "nightly-2025-03-05"
+            features: "--features provide"
             channel: "nightly"
 
     steps:

@@ -157,12 +157,12 @@ fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
                             let value = meta.value()?;
                             new_type = Some(value.parse()?);
                         } else if meta.path.is_ident("backtrace") {
-                            if cfg!(feature = "provide") {
+                            if cfg!(feature = "backtrace") {
                                 nt_backtrace = true;
                             } else {
                                 return Err(Error::new_spanned(
                                     meta.path,
-                                    "enable the `backtrace` or `provide` feature to use `backtrace` attribute",
+                                    "enable the `backtrace` feature to use `backtrace` attribute",
                                 ));
                             }
                         } else if meta.path.is_ident("extra_provide") {
@@ -172,7 +172,7 @@ fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
                             } else {
                                 return Err(Error::new_spanned(
                                     meta.path,
-                                    "enable the `backtrace` or `provide` feature to use `extra_provide` attribute",
+                                    "enable the `provide` feature to use `extra_provide` attribute",
                                 ));
                             }
                         } else {
@@ -277,7 +277,11 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
     }
 
     let backtrace_type_param = if backtrace {
-        quote!(thiserror_ext::__private::MaybeBacktrace)
+        if cfg!(feature = "provide") {
+            quote!(thiserror_ext::__private::MaybeBacktrace)
+        } else {
+            quote!(thiserror_ext::__private::CapturedBacktrace)
+        }
     } else {
         quote!(thiserror_ext::__private::NoExtraBacktrace)
     };
@@ -287,7 +291,11 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
         ty.name(),
         input_type,
         if backtrace {
-            "\n\nA backtrace is captured when the inner error doesn't provide one."
+            if cfg!(feature = "provide") {
+                "\n\nA backtrace is captured when the inner error doesn't provide one."
+            } else {
+                "\n\nA backtrace is captured when this error is created."
+            }
         } else {
             ""
         }
@@ -308,7 +316,7 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
         DeriveNewType::Arc => quote!(),
     };
 
-    let provide_fn = if backtrace || extra_provide.is_some() {
+    let provide_fn = if cfg!(feature = "provide") && (backtrace || extra_provide.is_some()) {
         let extra_call = if let Some(extra_fn) = &extra_provide {
             quote!(#extra_fn(self, request);)
         } else {
@@ -324,6 +332,17 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
         .into()
     } else {
         None
+    };
+
+    let backtrace_fn = if backtrace {
+        quote!(
+            #[doc = "Returns the captured backtrace, if any."]
+            #vis fn backtrace(&self) -> Option<&std::backtrace::Backtrace> {
+                self.0.backtrace()
+            }
+        )
+    } else {
+        quote!()
     };
 
     let generated = quote!(
@@ -371,6 +390,8 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
             #vis fn inner(&self) -> &#input_type {
                 self.0.inner()
             }
+
+            #backtrace_fn
 
             #into_inner
         }

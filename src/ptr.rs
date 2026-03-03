@@ -43,13 +43,20 @@ macro_rules! impl_methods {
         }
 
         impl<T, B> $ty<T, B> {
-            #[cfg_attr(not(feature = "provide"), allow(dead_code))]
-            fn backtrace(&self) -> &B {
+            #[cfg_attr(not(any(feature = "backtrace", feature = "provide")), allow(dead_code))]
+            fn backtrace_impl(&self) -> &B {
                 &self.0.as_ref().1
             }
 
             pub fn inner(&self) -> &T {
                 &self.0.as_ref().0
+            }
+        }
+
+        impl<T, B: WithBacktrace> $ty<T, B> {
+            #[cfg(feature = "backtrace")]
+            pub fn backtrace(&self) -> Option<&std::backtrace::Backtrace> {
+                self.backtrace_impl().backtrace()
             }
         }
 
@@ -81,7 +88,7 @@ macro_rules! impl_methods {
             // https://github.com/rust-lang/rust/issues/117432
             #[cfg(feature = "provide")]
             fn provide<'a>(&'a self, request: &mut core::error::Request<'a>) {
-                self.backtrace().provide(request);
+                self.backtrace_impl().provide(request);
                 T::provide(self.inner(), request);
             }
         }
