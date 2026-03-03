@@ -10,7 +10,7 @@ categories = { workspace = true }
 license = { workspace = true }
 
 [dependencies]
-thiserror-ext-derive = { version = "=0.3.1-alpha.2", path = "derive" }
+thiserror-ext-derive = { version = "=0.4.0-alpha", path = "derive" }
 
 [dev-dependencies]
 anyhow = "1"
@@ -26,7 +26,7 @@ nightly = ["std", "thiserror-ext-derive/nightly"]
 [workspace]
 members = ["derive", "no_std_test"]
 default-members = [".", "derive"]
-package.version = "0.3.1-alpha.2"
+package.version = "0.4.0-alpha"
 package.edition = "2021"
 package.authors = ["Bugen Zhao <i@bugenzhao.com>"]
 package.repository = "https://github.com/risingwavelabs/thiserror-ext"
