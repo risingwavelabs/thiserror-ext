@@ -35,7 +35,7 @@ pub use thiserror_ext_derive::*;
 
 #[doc(hidden)]
 pub mod __private {
-    pub use crate::backtrace::CapturedBacktrace;
+    pub use crate::backtrace::AlwaysBacktrace;
     #[cfg(feature = "provide")]
     pub use crate::backtrace::MaybeBacktrace;
     pub use crate::backtrace::NoExtraBacktrace;

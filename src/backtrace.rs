@@ -28,14 +28,14 @@ impl WithBacktrace for NoExtraBacktrace {
     fn provide<'a>(&'a self, _request: &mut core::error::Request<'a>) {}
 }
 
-mod captured {
+mod always {
     use super::WithBacktrace;
     use std::backtrace::Backtrace;
 
     /// Always capture a new backtrace.
-    pub struct CapturedBacktrace(Backtrace);
+    pub struct AlwaysBacktrace(Backtrace);
 
-    impl WithBacktrace for CapturedBacktrace {
+    impl WithBacktrace for AlwaysBacktrace {
         fn capture(_inner: &dyn core::error::Error) -> Self {
             Self(Backtrace::capture())
         }
@@ -51,7 +51,7 @@ mod captured {
     }
 }
 
-pub use captured::CapturedBacktrace;
+pub use always::AlwaysBacktrace;
 
 #[cfg(feature = "provide")]
 mod maybe {

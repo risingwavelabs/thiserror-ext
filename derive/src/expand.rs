@@ -273,7 +273,7 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
         if cfg!(feature = "provide") {
             quote!(thiserror_ext::__private::MaybeBacktrace)
         } else {
-            quote!(thiserror_ext::__private::CapturedBacktrace)
+            quote!(thiserror_ext::__private::AlwaysBacktrace)
         }
     } else {
         quote!(thiserror_ext::__private::NoExtraBacktrace)
