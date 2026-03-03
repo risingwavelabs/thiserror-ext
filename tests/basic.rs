@@ -1,6 +1,6 @@
-#![cfg_attr(feature = "provide", feature(error_generic_member_access))]
+#![cfg_attr(feature = "nightly", feature(error_generic_member_access))]
 
-#[cfg(feature = "provide")]
+#[cfg(feature = "nightly")]
 use std::backtrace::Backtrace;
 use thiserror::*;
 use thiserror_ext::*;
@@ -41,7 +41,7 @@ impl MyError {
     }
 }
 
-#[cfg(feature = "provide")]
+#[cfg(feature = "nightly")]
 #[derive(Error, Debug, Construct, ContextInto, Box)]
 #[thiserror_ext(newtype(name = MyErrorBacktrace))]
 pub enum MyErrorBacktraceInner {

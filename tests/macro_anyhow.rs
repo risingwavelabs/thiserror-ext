@@ -1,6 +1,6 @@
 //! Demonstrate that we can emulate a lightweight version of `anyhow` with `thiserror_ext`.
 
-#![cfg_attr(feature = "provide", feature(error_generic_member_access))]
+#![cfg_attr(feature = "nightly", feature(error_generic_member_access))]
 
 use thiserror::Error;
 use thiserror_ext::Box;

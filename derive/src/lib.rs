@@ -256,7 +256,7 @@ pub fn derive_macro(input: TokenStream) -> TokenStream {
 ///
 /// - By default (stable), a fresh backtrace is always captured when the error
 ///   is created.
-/// - With feature `provide` (nightly), a backtrace is captured only if the
+/// - With feature `nightly`, a backtrace is captured only if the
 ///   original error type does not already [`provide`] one.
 ///
 /// The generated new type exposes the backtrace by `error.backtrace()`.

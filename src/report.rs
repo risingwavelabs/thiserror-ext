@@ -189,7 +189,7 @@ impl fmt::Debug for Report<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.cleaned_error_trace(f, f.alternate())?;
 
-        #[cfg(feature = "provide")]
+        #[cfg(feature = "nightly")]
         {
             use std::backtrace::{Backtrace, BacktraceStatus};
 

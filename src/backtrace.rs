@@ -6,7 +6,7 @@ pub trait WithBacktrace {
     /// Get the captured backtrace, if any.
     fn backtrace(&self) -> Option<&std::backtrace::Backtrace>;
 
-    #[cfg(feature = "provide")]
+    #[cfg(feature = "nightly")]
     /// Provide the backtrace, if any.
     fn provide<'a>(&'a self, request: &mut core::error::Request<'a>);
 }
@@ -24,7 +24,7 @@ impl WithBacktrace for NoExtraBacktrace {
         None
     }
 
-    #[cfg(feature = "provide")]
+    #[cfg(feature = "nightly")]
     fn provide<'a>(&'a self, _request: &mut core::error::Request<'a>) {}
 }
 
@@ -44,7 +44,7 @@ mod always {
             Some(&self.0)
         }
 
-        #[cfg(feature = "provide")]
+        #[cfg(feature = "nightly")]
         fn provide<'a>(&'a self, request: &mut core::error::Request<'a>) {
             request.provide_ref(&self.0);
         }
@@ -53,7 +53,7 @@ mod always {
 
 pub use always::AlwaysBacktrace;
 
-#[cfg(feature = "provide")]
+#[cfg(feature = "nightly")]
 mod maybe {
     use super::WithBacktrace;
     use std::backtrace::Backtrace;
@@ -83,5 +83,5 @@ mod maybe {
     }
 }
 
-#[cfg(feature = "provide")]
+#[cfg(feature = "nightly")]
 pub use maybe::MaybeBacktrace;

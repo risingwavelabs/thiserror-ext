@@ -21,7 +21,7 @@ thiserror = "2"
 [features]
 default = ["std"]
 std = []
-provide = ["thiserror-ext-derive/provide"]
+nightly = ["std", "thiserror-ext-derive/nightly"]
 
 [workspace]
 members = ["derive", "no_std_test"]

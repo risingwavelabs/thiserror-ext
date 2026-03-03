@@ -159,13 +159,13 @@ fn resolve_meta(input: &DeriveInput) -> Result<DeriveMeta> {
                         } else if meta.path.is_ident("backtrace") {
                             nt_backtrace = true;
                         } else if meta.path.is_ident("extra_provide") {
-                            if cfg!(feature = "provide") {
+                            if cfg!(feature = "nightly") {
                                 let value = meta.value()?;
                                 nt_extra_provide = Some(value.parse()?);
                             } else {
                                 return Err(Error::new_spanned(
                                     meta.path,
-                                    "enable the `provide` feature to use `extra_provide` attribute",
+                                    "enable the `nightly` feature to use `extra_provide` attribute",
                                 ));
                             }
                         } else {
@@ -270,7 +270,7 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
     }
 
     let backtrace_type_param = if backtrace {
-        if cfg!(feature = "provide") {
+        if cfg!(feature = "nightly") {
             quote!(thiserror_ext::__private::MaybeBacktrace)
         } else {
             quote!(thiserror_ext::__private::AlwaysBacktrace)
@@ -284,7 +284,7 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
         ty.name(),
         input_type,
         if backtrace {
-            if cfg!(feature = "provide") {
+            if cfg!(feature = "nightly") {
                 "\n\nA backtrace is captured when the inner error doesn't provide one."
             } else {
                 "\n\nA backtrace is captured when this error is created."
@@ -309,7 +309,7 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
         DeriveNewType::Arc => quote!(),
     };
 
-    let provide_fn = if cfg!(feature = "provide") && (backtrace || extra_provide.is_some()) {
+    let provide_fn = if cfg!(feature = "nightly") && (backtrace || extra_provide.is_some()) {
         let extra_call = if let Some(extra_fn) = &extra_provide {
             quote!(#extra_fn(self, request);)
         } else {

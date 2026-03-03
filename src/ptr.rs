@@ -84,7 +84,7 @@ macro_rules! impl_methods {
             }
 
             // https://github.com/rust-lang/rust/issues/117432
-            #[cfg(feature = "provide")]
+            #[cfg(feature = "nightly")]
             fn provide<'a>(&'a self, request: &mut core::error::Request<'a>) {
                 self.backtrace_impl().provide(request);
                 T::provide(self.inner(), request);

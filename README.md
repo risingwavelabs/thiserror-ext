@@ -58,8 +58,8 @@ bail_not_implemented!(issue = 42, "an {} feature", "awesome");
 
 ## Features
 
-- `provide`: nightly-only support for `std::error::Error::provide`.
-  It enables:
+- `nightly`: enable nightly features of `Error`, especially `std::error::Error::provide`.
+  This enables:
   - forwarding provided members from generated newtypes;
   - backtrace de-duplication when source errors already provide one;
   - custom provide logic through `extra_provide`:

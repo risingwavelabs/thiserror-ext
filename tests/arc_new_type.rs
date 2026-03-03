@@ -1,5 +1,5 @@
 #![cfg(feature = "std")]
-#![cfg_attr(feature = "provide", feature(error_generic_member_access))]
+#![cfg_attr(feature = "nightly", feature(error_generic_member_access))]
 
 use std::{error::Error, num::ParseIntError};
 
@@ -9,8 +9,11 @@ use thiserror_ext::*;
 #[derive(Error, Debug, Arc, Construct)]
 #[thiserror_ext(newtype(name = SharedMyError))]
 pub enum MyErrorInner {
-    #[error("foo: {foo}")]
-    Foo { source: ParseIntError, foo: String },
+    #[error("foo: {input}")]
+    Foo {
+        source: ParseIntError,
+        input: String,
+    },
 }
 
 #[test]
