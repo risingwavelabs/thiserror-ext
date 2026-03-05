@@ -23,7 +23,9 @@ impl<T, B> core::ops::DerefMut for ErrorBox<T, B> {
 }
 
 #[cfg(feature = "std")]
-/// A [`Arc`] with optional backtrace.
+/// An [`Arc`] with optional backtrace.
+///
+/// [`Arc`]: std::sync::Arc
 #[repr(transparent)]
 pub struct ErrorArc<T, B>(std::sync::Arc<(T, B)>);
 
