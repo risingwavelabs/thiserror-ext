@@ -114,7 +114,9 @@ fn resolve_args_for_macro(fields: &[Field<'_>]) -> MacroArgs {
             };
             ctor_args.push(quote!(#member: #expr,))
         } else if field.is_message() {
-            ctor_args.push(quote!(#member: ::std::format!($($fmt_arg)*).into(),));
+            ctor_args.push(quote! {
+                #member: ::thiserror_ext::alloc::format!($($fmt_arg)*).into(),
+            });
         } else {
             other_args.push(quote!(#name = $#name:expr,));
             other_call_args.push(quote!(#name));
@@ -314,7 +316,7 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
         };
 
         quote!(
-            fn provide<'a>(&'a self, request: &mut std::error::Request<'a>) {
+            fn provide<'a>(&'a self, request: &mut core::error::Request<'a>) {
                 self.0.provide(request);
                 #extra_call
             }
@@ -344,23 +346,23 @@ pub fn derive_new_type(input: &DeriveInput, ty: DeriveNewType) -> Result<TokenSt
             }
         }
 
-        impl std::error::Error for #impl_type {
-            fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        impl core::error::Error for #impl_type {
+            fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
                 self.0.source()
             }
 
             #provide_fn
         }
 
-        impl std::fmt::Display for #impl_type {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                std::fmt::Display::fmt(&self.0, f)
+        impl core::fmt::Display for #impl_type {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                core::fmt::Display::fmt(&self.0, f)
             }
         }
 
-        impl std::fmt::Debug for #impl_type {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                std::fmt::Debug::fmt(&self.0, f)
+        impl core::fmt::Debug for #impl_type {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                core::fmt::Debug::fmt(&self.0, f)
             }
         }
 
@@ -530,8 +532,8 @@ pub fn derive_ctor(input: &DeriveInput, t: DeriveCtorType) -> Result<TokenStream
                             (move |#source_arg| #ctor_expr.into())(self)
                         }
                     }
-                    impl<__T> #ext_name for std::result::Result<__T, #source_ty> {
-                        type Ret = std::result::Result<__T, #impl_type>;
+                    impl<__T> #ext_name for core::result::Result<__T, #source_ty> {
+                        type Ret = core::result::Result<__T, #impl_type>;
                         #method_sig {
                             self.map_err(move |#source_arg| #ctor_expr.into())
                         }
@@ -662,7 +664,7 @@ pub fn derive_macro_inner(input: &DeriveInput, bail: bool) -> Result<TokenStream
                     args.push(arg);
                     call_args.push(quote!(#call_arg = $#call_arg.into(),));
                 } else {
-                    call_args.push(quote!(#call_arg = ::std::default::Default::default(),));
+                    call_args.push(quote!(#call_arg = ::core::default::Default::default(),));
                 }
             }
 
@@ -677,7 +679,7 @@ pub fn derive_macro_inner(input: &DeriveInput, bail: bool) -> Result<TokenStream
         let full_inner = if bail {
             quote!({
                 let res: #macro_path #impl_type = (#ctor_expr).into();
-                return ::std::result::Result::Err(res.into());
+                return ::core::result::Result::Err(res.into());
             })
         } else {
             quote!({
@@ -743,10 +745,10 @@ pub fn derive_report_debug(input: &DeriveInput) -> Result<TokenStream> {
     //    could be different than where panic happens.
     // 2. Passthrough the `alternate` flag.
     let generated = quote!(
-        impl ::std::fmt::Debug for #input_type {
-            fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        impl ::core::fmt::Debug for #input_type {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
                 use ::thiserror_ext::AsReport;
-                ::std::fmt::Debug::fmt(&self.as_report(), f)
+                ::core::fmt::Debug::fmt(&self.as_report(), f)
             }
         }
     );

@@ -1,11 +1,11 @@
 /// Provides backtrace to the error.
 pub trait WithBacktrace {
     /// Capture backtrace based on whether the error already has one.
-    fn capture(inner: &dyn std::error::Error) -> Self;
+    fn capture(inner: &dyn core::error::Error) -> Self;
 
     #[cfg(feature = "provide")]
     /// Provide the backtrace, if any.
-    fn provide<'a>(&'a self, request: &mut std::error::Request<'a>);
+    fn provide<'a>(&'a self, request: &mut core::error::Request<'a>);
 }
 
 /// Do not capture extra backtrace.
@@ -13,12 +13,12 @@ pub trait WithBacktrace {
 pub struct NoExtraBacktrace;
 
 impl WithBacktrace for NoExtraBacktrace {
-    fn capture(_inner: &dyn std::error::Error) -> Self {
+    fn capture(_inner: &dyn core::error::Error) -> Self {
         Self
     }
 
     #[cfg(feature = "provide")]
-    fn provide<'a>(&'a self, _request: &mut std::error::Request<'a>) {}
+    fn provide<'a>(&'a self, _request: &mut core::error::Request<'a>) {}
 }
 
 #[cfg(feature = "provide")]
@@ -30,8 +30,8 @@ mod maybe {
     pub struct MaybeBacktrace(Option<Backtrace>);
 
     impl WithBacktrace for MaybeBacktrace {
-        fn capture(inner: &dyn std::error::Error) -> Self {
-            let inner = if std::error::request_ref::<Backtrace>(inner).is_none() {
+        fn capture(inner: &dyn core::error::Error) -> Self {
+            let inner = if core::error::request_ref::<Backtrace>(inner).is_none() {
                 Some(Backtrace::capture())
             } else {
                 None
@@ -39,7 +39,7 @@ mod maybe {
             Self(inner)
         }
 
-        fn provide<'a>(&'a self, request: &mut std::error::Request<'a>) {
+        fn provide<'a>(&'a self, request: &mut core::error::Request<'a>) {
             if let Some(backtrace) = &self.0 {
                 request.provide_ref(backtrace);
             }

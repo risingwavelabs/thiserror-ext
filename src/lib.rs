@@ -18,6 +18,11 @@
 //! performance, and automatically capturing backtraces if needed.
 
 #![cfg_attr(feature = "provide", feature(error_generic_member_access))]
+#![cfg_attr(not(feature = "std"), no_std)]
+
+// Re-export the alloc crate for use within derived code.
+#[doc(hidden)]
+pub extern crate alloc;
 
 mod as_dyn;
 mod backtrace;
@@ -33,17 +38,19 @@ pub mod __private {
     #[cfg(feature = "provide")]
     pub use crate::backtrace::MaybeBacktrace;
     pub use crate::backtrace::NoExtraBacktrace;
-    pub use crate::ptr::{ErrorArc, ErrorBox};
+    #[cfg(feature = "std")]
+    pub use crate::ptr::ErrorArc;
+    pub use crate::ptr::ErrorBox;
 }
 
 macro_rules! for_dyn_error_types {
     ($macro:ident) => {
         $macro! {
-            { dyn std::error::Error },
-            { dyn std::error::Error + Send },
-            { dyn std::error::Error + Sync },
-            { dyn std::error::Error + Send + Sync },
-            { dyn std::error::Error + Send + Sync + std::panic::UnwindSafe },
+            { dyn core::error::Error },
+            { dyn core::error::Error + core::marker::Send },
+            { dyn core::error::Error + core::marker::Sync },
+            { dyn core::error::Error + core::marker::Send + core::marker::Sync },
+            { dyn core::error::Error + core::marker::Send + core::marker::Sync + core::panic::UnwindSafe },
         }
     };
 }
@@ -52,7 +59,7 @@ pub(crate) use for_dyn_error_types;
 pub(crate) mod error_sealed {
     pub trait Sealed {}
 
-    impl<T: std::error::Error> Sealed for T {}
+    impl<T: core::error::Error> Sealed for T {}
 
     macro_rules! impl_sealed {
         ($({$ty:ty },)*) => {
