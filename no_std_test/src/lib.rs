@@ -1,4 +1,5 @@
 #![no_std]
+#![allow(dead_code)]
 
 extern crate alloc;
 
@@ -52,6 +53,8 @@ enum MacroError {
     },
 }
 
-pub fn macro_expand() {
-    test!("Test message");
+#[test]
+pub fn test_no_std_macro_expand() {
+    let err = test!("Test message");
+    assert_eq!(err.to_string(), "Test error: Test message");
 }
