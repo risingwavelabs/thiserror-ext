@@ -38,7 +38,6 @@ pub mod __private {
     #[cfg(feature = "provide")]
     pub use crate::backtrace::MaybeBacktrace;
     pub use crate::backtrace::NoExtraBacktrace;
-    #[cfg(feature = "std")]
     pub use crate::ptr::ErrorArc;
     pub use crate::ptr::ErrorBox;
 }
