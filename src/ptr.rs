@@ -43,6 +43,7 @@ macro_rules! impl_methods {
         }
 
         impl<T, B> $ty<T, B> {
+            #[allow(dead_code)]
             fn backtrace_impl(&self) -> &B {
                 &self.0.as_ref().1
             }
@@ -53,6 +54,7 @@ macro_rules! impl_methods {
         }
 
         impl<T, B: WithBacktrace> $ty<T, B> {
+            #[cfg(feature = "std")]
             pub fn backtrace(&self) -> Option<&std::backtrace::Backtrace> {
                 self.backtrace_impl().backtrace()
             }

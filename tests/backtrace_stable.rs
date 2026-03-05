@@ -1,4 +1,4 @@
-#![cfg(not(feature = "nightly"))]
+#![cfg(all(feature = "std", not(feature = "nightly")))]
 
 use thiserror::Error;
 use thiserror_ext_derive::Box;
