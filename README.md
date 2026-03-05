@@ -58,6 +58,14 @@ bail_not_implemented!(issue = 42, "an {} feature", "awesome");
 
 ## Features
 
+- `std` (default): enables `std` integration.
+  In particular, `#[thiserror_ext(newtype(.., backtrace))]` captures backtraces and the generated newtype exposes `.backtrace()`.
+  Disable default features for `no_std` + `alloc`:
+
+  ```toml
+  thiserror-ext = { version = "...", default-features = false }
+  ```
+
 - `nightly`: enable nightly features of `Error`, especially `std::error::Error::provide`.
   This enables:
   - forwarding provided members from generated newtypes;
