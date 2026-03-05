@@ -6,7 +6,7 @@ extern crate alloc;
 use alloc::boxed::Box;
 use alloc::string::ToString;
 use thiserror::Error;
-use thiserror_ext::{Box, Construct, ContextInto, Macro};
+use thiserror_ext::{Arc, Box, Construct, ContextInto, Macro};
 
 #[derive(Error, Debug, Construct, ContextInto, Box)]
 #[thiserror_ext(newtype(name = MyError))]
@@ -53,8 +53,22 @@ enum MacroError {
     },
 }
 
+#[derive(Error, Debug, Arc)]
+#[thiserror_ext(newtype(name = MyArcError))]
+enum MyArcErrorInner {
+    #[error("unsupported: {0}")]
+    Unsupported(alloc::string::String),
+}
+
 #[test]
 pub fn test_no_std_macro_expand() {
     let err = test!("Test message");
     assert_eq!(err.to_string(), "Test error: Test message");
+}
+
+#[test]
+pub fn test_no_std_arc_expand() {
+    let err: MyArcError = MyArcErrorInner::Unsupported("foo".to_string()).into();
+    let cloned = err.clone();
+    assert_eq!(cloned.to_string(), "unsupported: foo");
 }

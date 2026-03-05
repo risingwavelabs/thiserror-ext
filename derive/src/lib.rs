@@ -290,7 +290,7 @@ pub fn derive_box(input: TokenStream) -> TokenStream {
 /// in an [`Arc`], so that it can always be cloned and shared across threads.
 /// See [`thiserror_ext::Box`] for the explanation and examples.
 ///
-/// [`Arc`]: std::sync::Arc
+/// [`Arc`]: alloc::sync::Arc
 /// [`thiserror_ext::Box`]: derive@Box
 #[proc_macro_derive(Arc, attributes(thiserror_ext))]
 pub fn derive_arc(input: TokenStream) -> TokenStream {

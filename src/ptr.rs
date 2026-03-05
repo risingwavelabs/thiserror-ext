@@ -1,5 +1,6 @@
 use crate::backtrace::WithBacktrace;
 use alloc::boxed::Box;
+use alloc::sync::Arc;
 
 /// A [`Box`] with optional backtrace.
 #[derive(Clone)]
@@ -22,14 +23,10 @@ impl<T, B> core::ops::DerefMut for ErrorBox<T, B> {
     }
 }
 
-#[cfg(feature = "std")]
 /// An [`Arc`] with optional backtrace.
-///
-/// [`Arc`]: std::sync::Arc
 #[repr(transparent)]
-pub struct ErrorArc<T, B>(std::sync::Arc<(T, B)>);
+pub struct ErrorArc<T, B>(Arc<(T, B)>);
 
-#[cfg(feature = "std")]
 impl<T, B> Clone for ErrorArc<T, B> {
     fn clone(&self) -> Self {
         Self(self.0.clone())
@@ -93,5 +90,4 @@ macro_rules! impl_methods {
 
 impl_methods!(ErrorBox);
 
-#[cfg(feature = "std")]
 impl_methods!(ErrorArc);
