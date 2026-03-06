@@ -17,7 +17,7 @@
 //! wrap an `enum` error type into a new type, reducing the size to improve
 //! performance, and automatically capturing backtraces if needed.
 
-#![cfg_attr(feature = "provide", feature(error_generic_member_access))]
+#![cfg_attr(feature = "nightly", feature(error_generic_member_access))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 // Re-export the alloc crate for use within derived code.
@@ -35,7 +35,9 @@ pub use thiserror_ext_derive::*;
 
 #[doc(hidden)]
 pub mod __private {
-    #[cfg(feature = "provide")]
+    #[cfg(feature = "std")]
+    pub use crate::backtrace::AlwaysBacktrace;
+    #[cfg(feature = "nightly")]
     pub use crate::backtrace::MaybeBacktrace;
     pub use crate::backtrace::NoExtraBacktrace;
     pub use crate::ptr::ErrorArc;

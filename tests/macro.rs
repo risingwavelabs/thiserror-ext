@@ -1,4 +1,4 @@
-#![cfg_attr(feature = "provide", feature(error_generic_member_access))]
+#![cfg_attr(feature = "nightly", feature(error_generic_member_access))]
 
 pub mod inner {
     use thiserror::Error;
@@ -81,7 +81,7 @@ mod tests {
                 extra,
                 msg,
                 ..
-            } if extra == "" && msg.as_ref() == "hello 42"
+            } if extra.is_empty() && msg.as_ref() == "hello 42"
         ));
     }
 

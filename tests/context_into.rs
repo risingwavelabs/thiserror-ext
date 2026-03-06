@@ -1,7 +1,7 @@
 //! This example demonstrates how to achieve the similar functionality as
 //! [`anyhow::Context`] with `thiserror_ext`, in a type-safer manner.
 
-#![cfg_attr(feature = "provide", feature(error_generic_member_access))]
+#![cfg_attr(feature = "nightly", feature(error_generic_member_access))]
 
 use expect_test::expect;
 use thiserror::Error;
@@ -20,7 +20,7 @@ enum MyError {
     #[error("{context}")]
     Foo {
         #[source]
-        foo: FooError,
+        my_source: FooError,
         context: String,
     },
 

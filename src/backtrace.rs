@@ -3,7 +3,11 @@ pub trait WithBacktrace {
     /// Capture backtrace based on whether the error already has one.
     fn capture(inner: &dyn core::error::Error) -> Self;
 
-    #[cfg(feature = "provide")]
+    #[cfg(feature = "std")]
+    /// Get the captured backtrace, if any.
+    fn backtrace(&self) -> Option<&std::backtrace::Backtrace>;
+
+    #[cfg(feature = "nightly")]
     /// Provide the backtrace, if any.
     fn provide<'a>(&'a self, request: &mut core::error::Request<'a>);
 }
@@ -17,11 +21,43 @@ impl WithBacktrace for NoExtraBacktrace {
         Self
     }
 
-    #[cfg(feature = "provide")]
+    #[cfg(feature = "std")]
+    fn backtrace(&self) -> Option<&std::backtrace::Backtrace> {
+        None
+    }
+
+    #[cfg(feature = "nightly")]
     fn provide<'a>(&'a self, _request: &mut core::error::Request<'a>) {}
 }
 
-#[cfg(feature = "provide")]
+#[cfg(feature = "std")]
+mod always {
+    use super::WithBacktrace;
+    use std::backtrace::Backtrace;
+
+    /// Always capture a new backtrace.
+    pub struct AlwaysBacktrace(Backtrace);
+
+    impl WithBacktrace for AlwaysBacktrace {
+        fn capture(_inner: &dyn core::error::Error) -> Self {
+            Self(Backtrace::capture())
+        }
+
+        fn backtrace(&self) -> Option<&Backtrace> {
+            Some(&self.0)
+        }
+
+        #[cfg(feature = "nightly")]
+        fn provide<'a>(&'a self, request: &mut core::error::Request<'a>) {
+            request.provide_ref(&self.0);
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+pub use always::AlwaysBacktrace;
+
+#[cfg(feature = "nightly")]
 mod maybe {
     use super::WithBacktrace;
     use std::backtrace::Backtrace;
@@ -39,6 +75,10 @@ mod maybe {
             Self(inner)
         }
 
+        fn backtrace(&self) -> Option<&Backtrace> {
+            self.0.as_ref()
+        }
+
         fn provide<'a>(&'a self, request: &mut core::error::Request<'a>) {
             if let Some(backtrace) = &self.0 {
                 request.provide_ref(backtrace);
@@ -47,5 +87,5 @@ mod maybe {
     }
 }
 
-#[cfg(feature = "provide")]
+#[cfg(feature = "nightly")]
 pub use maybe::MaybeBacktrace;

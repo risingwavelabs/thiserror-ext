@@ -1,4 +1,4 @@
-#![cfg_attr(feature = "provide", feature(error_generic_member_access))]
+#![cfg_attr(feature = "nightly", feature(error_generic_member_access))]
 
 use thiserror::Error;
 use thiserror_ext::{Box, ReportDebug};
@@ -38,12 +38,28 @@ fn test_report_debug() {
 #[should_panic]
 fn test_unwrap() {
     let error = Outer::default();
-    let _ = Err::<(), _>(error).unwrap();
+    fn fail_with<E>(error: E) -> Result<(), E> {
+        if std::hint::black_box(true) {
+            Err(error)
+        } else {
+            Ok(())
+        }
+    }
+
+    fail_with(error).unwrap();
 }
 
 #[test]
 #[should_panic]
 fn test_expect() {
     let error = Outer::default();
-    let _ = Err::<(), _>(error).expect("intentional panic");
+    fn fail_with<E>(error: E) -> Result<(), E> {
+        if std::hint::black_box(true) {
+            Err(error)
+        } else {
+            Ok(())
+        }
+    }
+
+    fail_with(error).expect("intentional panic");
 }

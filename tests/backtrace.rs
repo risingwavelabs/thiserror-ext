@@ -1,4 +1,4 @@
-#![cfg(feature = "provide")]
+#![cfg(feature = "nightly")]
 #![feature(error_generic_member_access)]
 
 use std::backtrace::Backtrace;
@@ -67,4 +67,16 @@ fn test_without_source_backtrace() {
         .to_string();
 
     assert!(!backtrace.contains("parse_inner"), "{backtrace}");
+}
+
+#[test]
+fn test_backtrace_method_with_source_backtrace() {
+    let error = parse_float_with_backtrace("not a number").unwrap_err();
+    assert!(error.backtrace().is_none());
+}
+
+#[test]
+fn test_backtrace_method_without_source_backtrace() {
+    let error = parse_int("not a number").unwrap_err();
+    assert!(error.backtrace().is_some());
 }

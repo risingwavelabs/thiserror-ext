@@ -23,7 +23,7 @@ jobs:
             features: "--no-default-features"
             channel: "stable+no-default-features"
           - toolchain: "nightly-2025-03-05"
-            features: "--features backtrace"
+            features: "--features nightly"
             channel: "nightly"
 
     steps:
